@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Test - Emerti Tracking</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        .controls {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #495057;
+            font-size: 14px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-connect {
+            background: #28a745;
+            color: white;
+        }
+        .btn-connect:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+        }
+        .btn-disconnect {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-disconnect:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+        }
+        .btn-clear {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-clear:hover {
+            background: #5a6268;
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        .status {
+            padding: 20px 30px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.connected .status-indicator {
+            background: #28a745;
+        }
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status.disconnected .status-indicator {
+            background: #dc3545;
+        }
+        .status.connecting {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status.connecting .status-indicator {
+            background: #ffc107;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .messages {
+            padding: 30px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .messages-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .messages-header h2 {
+            font-size: 18px;
+            color: #343a40;
+        }
+        .message-count {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .message {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-left: 4px solid #667eea;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: transform 0.2s;
+        }
+        .message:hover {
+            transform: translateX(4px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .message-time {
+            font-size: 11px;
+            color: #6c757d;
+            margin-bottom: 8px;
+        }
+        .message-content {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .no-messages {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+        .no-messages-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+        .instruction {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 16px;
+            margin: 20px 30px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #0c5460;
+        }
+        .instruction strong {
+            display: block;
+            margin-bottom: 8px;
+            color: #004085;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚢 WebSocket Test - Emerti Tracking</h1>
+            <p>Test real-time tracking data dengan WebSocket</p>
+        </div>
+
+        <div class="instruction">
+            <strong>📌 Cara Pakai:</strong>
+            1. Pastikan backend sudah running (make run)<br>
+            2. Isi vessel_id (opsional - kosongkan untuk semua vessel)<br>
+            3. Klik tombol "Connect"<br>
+            4. Data realtime akan otomatis diterima setiap ada update dari sensor
+        </div>
+
+        <div class="controls">
+            <div class="form-group">
+                <label for="wsUrl">WebSocket URL:</label>
+                <input type="text" id="wsUrl" value="ws://localhost:6969/api/tracking/ws" readonly />
+            </div>
+            <div class="form-group">
+                <label for="vesselId">Vessel ID (kosongkan untuk semua vessel):</label>
+                <input type="number" id="vesselId" placeholder="Contoh: 1 atau 2" min="1" />
+            </div>
+            <div class="form-group">
+                <label>URL Preview:</label>
+                <input type="text" id="urlPreview" readonly style="background: #1e1e1e; color: #4fc3f7; font-family: monospace;" />
+            </div>
+            <div class="button-group">
+                <button class="btn-connect" id="btnConnect">🔌 Connect</button>
+                <button class="btn-disconnect" id="btnDisconnect" disabled>❌ Disconnect</button>
+                <button class="btn-clear" id="btnClear">🗑️ Clear Messages</button>
+            </div>
+        </div>
+
+        <div id="status" class="status disconnected">
+            <div class="status-indicator"></div>
+            <span id="statusText">Status: Disconnected</span>
+        </div>
+
+        <div class="messages">
+            <div class="messages-header">
+                <h2>📨 Messages</h2>
+                <span class="message-count" id="messageCount">0</span>
+            </div>
+            <div id="messagesContainer">
+                <div class="no-messages">
+                    <div class="no-messages-icon">📭</div>
+                    <p>Belum ada message. Klik "Connect" untuk mulai menerima data.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let messageCount = 0;
+
+        const btnConnect = document.getElementById('btnConnect');
+        const btnDisconnect = document.getElementById('btnDisconnect');
+        const btnClear = document.getElementById('btnClear');
+        const statusDiv = document.getElementById('status');
+        const statusText = document.getElementById('statusText');
+        const messagesContainer = document.getElementById('messagesContainer');
+        const messageCountSpan = document.getElementById('messageCount');
+        const vesselIdInput = document.getElementById('vesselId');
+        const urlPreview = document.getElementById('urlPreview');
+
+        btnConnect.addEventListener('click', connect);
+        btnDisconnect.addEventListener('click', disconnect);
+        btnClear.addEventListener('click', clearMessages);
+        
+        // Update URL preview when vessel ID changes
+        vesselIdInput.addEventListener('input', updateUrlPreview);
+        
+        function updateUrlPreview() {
+            urlPreview.value = buildWebSocketUrl();
+        }
+        
+        function buildWebSocketUrl() {
+            const wsUrl = document.getElementById('wsUrl').value;
+            
+            if (vesselIdInput.value) {
+                return `${wsUrl}?vessel_id=${vesselIdInput.value}`;
+            }
+            return wsUrl;
+        }
+
+        function connect() {
+            const url = buildWebSocketUrl();
+
+            updateStatus('connecting', 'Connecting...');
+            
+            try {
+                ws = new WebSocket(url);
+
+                ws.onopen = function(event) {
+                    updateStatus('connected', 'Connected ✅');
+                    addMessage('✅ WebSocket connection established', 'success');
+                    addMessage(`🔗 Connected to: ${url}`, 'info');
+                    btnConnect.disabled = true;
+                    btnDisconnect.disabled = false;
+                    
+                    // Show active filter
+                    if (vesselIdInput.value) {
+                        addMessage(`🔍 Filter: Vessel ID: ${vesselIdInput.value}`, 'info');
+                    } else {
+                        addMessage('📍 No filter - Subscribed to ALL vessels', 'info');
+                    }
+                    
+                    addMessage('⏳ Waiting for real-time sensor data...', 'info');
+                };
+
+                ws.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        
+                        // Check message type
+                        if (data.type === 'realtime') {
+                            addMessage(`🔴 Real-time update for vessel ${data.data.vessel_id} (${data.data.vessel_name})`, 'info');
+                            addMessage(JSON.stringify(data, null, 2), 'data');
+                        } else {
+                            addMessage(JSON.stringify(data, null, 2), 'data');
+                        }
+                    } catch (e) {
+                        addMessage(event.data, 'data');
+                    }
+                };
+
+                ws.onerror = function(error) {
+                    console.error('WebSocket error:', error);
+                    addMessage('❌ WebSocket error occurred', 'error');
+                };
+
+                ws.onclose = function(event) {
+                    updateStatus('disconnected', 'Disconnected');
+                    addMessage(`🔌 WebSocket disconnected. Code: ${event.code}, Reason: ${event.reason || 'None'}`, 'info');
+                    btnConnect.disabled = false;
+                    btnDisconnect.disabled = true;
+                };
+            } catch (error) {
+                updateStatus('disconnected', 'Connection Failed');
+                addMessage('❌ Failed to connect: ' + error.message, 'error');
+                btnConnect.disabled = false;
+                btnDisconnect.disabled = true;
+            }
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        function updateStatus(state, text) {
+            statusDiv.className = `status ${state}`;
+            statusText.textContent = `Status: ${text}`;
+        }
+
+        function addMessage(message, type) {
+            // Remove "no messages" placeholder
+            const noMessages = messagesContainer.querySelector('.no-messages');
+            if (noMessages) {
+                messagesContainer.innerHTML = '';
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'message-time';
+            const now = new Date();
+            timeDiv.textContent = now.toLocaleTimeString('id-ID') + '.' + now.getMilliseconds();
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = message;
+            
+            messageDiv.appendChild(timeDiv);
+            messageDiv.appendChild(contentDiv);
+            
+            messagesContainer.insertBefore(messageDiv, messagesContainer.firstChild);
+            
+            // Update message count
+            messageCount++;
+            messageCountSpan.textContent = messageCount;
+            
+            // Keep only last 50 messages
+            while (messagesContainer.children.length > 50) {
+                messagesContainer.removeChild(messagesContainer.lastChild);
+            }
+        }
+
+        function clearMessages() {
+            messagesContainer.innerHTML = `
+                <div class="no-messages">
+                    <div class="no-messages-icon">📭</div>
+                    <p>Messages cleared. Waiting for new messages...</p>
+                </div>
+            `;
+            messageCount = 0;
+            messageCountSpan.textContent = '0';
+        }
+
+        // Initialize URL preview
+        updateUrlPreview();
+        
+        // Auto-focus vessel ID input
+        document.getElementById('vesselId').focus();
+    </script>
+</body>
+</html>

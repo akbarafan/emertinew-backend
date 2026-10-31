@@ -1,0 +1,50 @@
+# Build context filters.
+#
+# Only Go sources, migrations and the swagger docs package need to reach the
+# builder. Everything below either bloats the context, breaks the Linux build,
+# or would leak developer-only secrets into an image layer.
+
+# Version control
+.git
+.gitignore
+.github
+
+# Stale compiled binaries sitting in the source tree (57 MB each)
+*.exe
+*.exe~
+emerti
+emerti-be
+main
+test_build.exe
+backfill-raspilocal.exe
+import-raspilocal.exe
+importer.exe
+
+# Node artefacts — the backend has no runtime JS dependency
+node_modules
+package.json
+package-lock.json
+
+# Container definition itself: the context already is the project root
+deploy/
+
+# Local configuration and secrets. config.LoadConfig reads plain environment
+# variables inside the container, so baking .env in would only leak credentials.
+.env
+.env.*
+!.env.example
+
+# Test scratch and captured traffic
+test-ws.html
+test_mqtt.sh
+*.har
+*.log
+tmp/
+out/
+
+# Editor / OS noise
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp

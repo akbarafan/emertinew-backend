@@ -1,0 +1,28 @@
+name: emerti-fms
+services:
+  db:
+    image: timescale/timescaledb:2.17.2-pg17
+    container_name: emerti-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=emerti_db
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "6666:5432"
+    volumes:
+      - emerti-postgres:/var/lib/postgresql/data
+
+  redis:
+    image: redis:8-alpine
+    container_name: emerti-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - emerti-redis:/data
+    command: redis-server --appendonly yes --requirepass emertiRedis2026!
+
+volumes:
+  emerti-postgres:
+  emerti-redis:

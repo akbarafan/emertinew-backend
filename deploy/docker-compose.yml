@@ -1,0 +1,175 @@
+# EMERTI Command Center — self-contained backend stack.
+#
+# Deliberately separate from the legacy `docker-compose.yml` at the backend root:
+# different Compose project, container names, named volumes, network and host
+# ports, so the two stacks can run side by side on one machine.
+#
+#   legacy stack : project emerti-fms   →  emerti-fms-db  :6666, emerti-fms-redis :6379
+#   this stack   : project emerti-cc    →  emerti-cc-db   :6667, emerti-cc-redis :6380
+#
+# Startup order is enforced with health gates rather than sleeps:
+#   db + redis healthy → migrate (SQL files, exits) → seed (master data, exits) → api
+#
+# Usage: docker compose --env-file deploy/.env -f deploy/docker-compose.yml <cmd>
+
+name: ${COMPOSE_PROJECT_NAME:-emerti-cc}
+
+# ─── Shared build definition ─────────────────────────────────────────────────
+# Anchored so migrate, seed and api all resolve to the same image. Compose
+# caches the build layers, so only the first service actually compiles. The
+# resulting image tag is declared per service below, as a sibling of `build`.
+x-api-build: &api-build
+  context: ..
+  dockerfile: deploy/Dockerfile
+  target: runtime
+
+# ─── Shared environment ──────────────────────────────────────────────────────
+# config.LoadConfig prefers real environment variables over .env (godotenv.Load
+# does not override), which is exactly what we want inside a container.
+x-api-env: &api-env
+  APP_ENV: ${APP_ENV:-production}
+  APP_PORT: "6969"
+  DB_HOST: db
+  DB_PORT: "5432"
+  DB_USER: ${DB_USER:-emerti}
+  DB_PASSWORD: ${DB_PASSWORD:-emerti_dev_password}
+  DB_NAME: ${DB_NAME:-emerti_db}
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  REDIS_PASSWORD: ${REDIS_PASSWORD:-emertiRedis2026!}
+  REDIS_PREFIX: ${REDIS_PREFIX:-emerti:session:}
+  JWT_SECRET: ${JWT_SECRET:-change-me-in-production-450542235a72l6u59g86ar2498597a927}
+  FILEBROWSER_PW: ${FILEBROWSER_PW:-change-me}
+  MQTT_BROKER: ${MQTT_BROKER:-103.103.20.19}
+  MQTT_PORT: ${MQTT_PORT:-1883}
+  MQTT2_BROKER: ${MQTT2_BROKER:-103.150.194.254}
+  MQTT2_PORT: ${MQTT2_PORT:-1883}
+
+services:
+  # ── TimescaleDB ────────────────────────────────────────────────────────────
+  db:
+    image: timescale/timescaledb:2.17.2-pg17
+    container_name: emerti-cc-db
+    restart: unless-stopped
+    # The application connects with TimeZone=Asia/Jakarta, so the server has to
+    # agree or date_trunc boundaries on the hypertables drift by seven hours.
+    # TZ seeds the cluster default at initdb time; the -c flag pins it for the
+    # running server too, which is what actually governs the session.
+    command:
+      - postgres
+      - -c
+      - timezone=Asia/Jakarta
+    environment:
+      POSTGRES_DB: ${DB_NAME:-emerti_db}
+      POSTGRES_USER: ${DB_USER:-emerti}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-emerti_dev_password}
+      TZ: Asia/Jakarta
+      PGTZ: Asia/Jakarta
+    ports:
+      - "127.0.0.1:${DB_HOST_PORT:-6667}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${DB_USER:-emerti} -d ${DB_NAME:-emerti_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    networks: [cc]
+
+  # ── Redis ─────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:8-alpine
+    container_name: emerti-cc-redis
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - ${REDIS_PASSWORD:-emertiRedis2026!}
+    ports:
+      - "127.0.0.1:${REDIS_HOST_PORT:-6380}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test:
+        ["CMD-SHELL", "REDISCLI_AUTH='${REDIS_PASSWORD:-emertiRedis2026!}' redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks: [cc]
+
+  # ── SQL migrations ─────────────────────────────────────────────────────────
+  # ConnectDatabase already ran AutoMigrate by this point (main.go calls it
+  # before the flag branches), so the schema exists and the .sql files only
+  # apply fixes and extra indexes on top.
+  migrate:
+    build: *api-build
+    image: emerti-cc-api:latest
+    container_name: emerti-cc-migrate
+    command: ["-migrate"]
+    environment: *api-env
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    networks: [cc]
+
+  # ── Master data seed ───────────────────────────────────────────────────────
+  # Requires Redis: main.go returns from the -migrate branch before InitRedis,
+  # but the -seed branch runs after it and treats a Redis failure as fatal.
+  seed:
+    build: *api-build
+    image: emerti-cc-api:latest
+    container_name: emerti-cc-seed
+    command: ["-seed"]
+    environment: *api-env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
+    networks: [cc]
+
+  # ── API ────────────────────────────────────────────────────────────────────
+  api:
+    build: *api-build
+    image: emerti-cc-api:latest
+    container_name: emerti-cc-api
+    restart: unless-stopped
+    environment: *api-env
+    ports:
+      # 6969 matches NEXT_PUBLIC_API_BASE_URL in the frontend, so no client
+      # configuration change is needed.
+      - "${API_HOST_PORT:-6969}:6969"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      seed:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        ["CMD-SHELL", "curl -fsS http://127.0.0.1:6969/ >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks: [cc]
+
+volumes:
+  postgres-data:
+    name: emerti-cc-postgres
+  redis-data:
+    name: emerti-cc-redis
+
+networks:
+  cc:
+    name: emerti-cc-net

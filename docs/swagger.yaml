@@ -1,0 +1,1219 @@
+basePath: /api
+definitions:
+  auth.LoginRequest:
+    properties:
+      password:
+        example: password123
+        type: string
+      username:
+        example: admin
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  device.CreateDeviceRequest:
+    properties:
+      name:
+        example: GPS Module A1
+        type: string
+      sensor_id:
+        example:
+        - 1
+        - 2
+        items:
+          type: integer
+        type: array
+      type:
+        enum:
+        - top
+        - bottom
+        example: top
+        type: string
+    required:
+    - name
+    - type
+    type: object
+  device.UpdateDeviceRequest:
+    properties:
+      name:
+        example: GPS Module A1 Updated
+        type: string
+      sensor_id:
+        example:
+        - 1
+        - 2
+        - 3
+        items:
+          type: integer
+        type: array
+      type:
+        enum:
+        - top
+        - bottom
+        example: bottom
+        type: string
+    type: object
+  sensor.CreateSensorRequest:
+    properties:
+      code:
+        example: GPS001
+        type: string
+      name:
+        example: GPS Sensor 1
+        type: string
+      topic:
+        example: sensor/gps/001
+        type: string
+    required:
+    - code
+    - name
+    - topic
+    type: object
+  sensor.UpdateSensorRequest:
+    properties:
+      code:
+        example: GPS002
+        type: string
+      name:
+        example: GPS Sensor 2
+        type: string
+      topic:
+        example: sensor/gps/002
+        type: string
+    type: object
+  user.CreateUserRequest:
+    properties:
+      password:
+        example: password123
+        minLength: 6
+        type: string
+      role:
+        enum:
+        - superadmin
+        - admin
+        - guest
+        example: admin
+        type: string
+      username:
+        example: newuser
+        type: string
+    required:
+    - password
+    - role
+    - username
+    type: object
+  user.UpdateUserRequest:
+    properties:
+      password:
+        example: newpassword123
+        minLength: 6
+        type: string
+      role:
+        enum:
+        - superadmin
+        - admin
+        - guest
+        example: guest
+        type: string
+      username:
+        example: updateduser
+        type: string
+    type: object
+  vessel.CreateVesselRequest:
+    properties:
+      device_id:
+        example:
+        - 1
+        - 2
+        items:
+          type: integer
+        type: array
+      is_active:
+        example: true
+        type: boolean
+      name:
+        example: KM Nusantara 01
+        type: string
+    required:
+    - name
+    type: object
+  vessel.UpdateVesselRequest:
+    properties:
+      device_id:
+        example:
+        - 1
+        - 2
+        - 3
+        items:
+          type: integer
+        type: array
+      is_active:
+        example: false
+        type: boolean
+      name:
+        example: KM Nusantara 01 Updated
+        type: string
+    type: object
+host: localhost:6969
+info:
+  contact:
+    email: support@emerti.com
+    name: API Support
+  description: Production-ready backend API untuk sistem Emerti dengan MQTT integration,
+    JWT authentication, dan PostgreSQL database.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Emerti Backend API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Login dengan username dan password untuk mendapatkan JWT token
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'success: true, data: {token, user}'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: invalid credentials'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: User login
+      tags:
+      - Authentication
+  /auth/logout:
+    post:
+      description: Logout dan invalidate session JWT token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'success: true, message: Logout successful'
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 'error: Unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: User logout
+      tags:
+      - Authentication
+  /master/device:
+    get:
+      description: Get all devices
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Get all devices
+      tags:
+      - Master Data - Device
+    post:
+      consumes:
+      - application/json
+      description: Create a new device
+      parameters:
+      - description: Device data
+        in: body
+        name: device
+        required: true
+        schema:
+          $ref: '#/definitions/device.CreateDeviceRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Create device
+      tags:
+      - Master Data - Device
+  /master/device/{id}:
+    delete:
+      description: Soft delete device by ID
+      parameters:
+      - description: Device ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Delete device
+      tags:
+      - Master Data - Device
+    get:
+      description: Get device details by ID
+      parameters:
+      - description: Device ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Get device by ID
+      tags:
+      - Master Data - Device
+    patch:
+      consumes:
+      - application/json
+      description: Update device by ID
+      parameters:
+      - description: Device ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Device data
+        in: body
+        name: device
+        required: true
+        schema:
+          $ref: '#/definitions/device.UpdateDeviceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Update device
+      tags:
+      - Master Data - Device
+  /master/sensor:
+    get:
+      description: Get all sensor master data
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Get all sensors
+      tags:
+      - Master Data - Sensor
+    post:
+      consumes:
+      - application/json
+      description: Create a new sensor master data
+      parameters:
+      - description: Sensor data
+        in: body
+        name: sensor
+        required: true
+        schema:
+          $ref: '#/definitions/sensor.CreateSensorRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Create sensor
+      tags:
+      - Master Data - Sensor
+  /master/sensor/{id}:
+    delete:
+      description: Soft delete sensor master data by ID
+      parameters:
+      - description: Sensor ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Delete sensor
+      tags:
+      - Master Data - Sensor
+    get:
+      description: Get sensor master data by ID
+      parameters:
+      - description: Sensor ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Get sensor by ID
+      tags:
+      - Master Data - Sensor
+    patch:
+      consumes:
+      - application/json
+      description: Update sensor master data by ID
+      parameters:
+      - description: Sensor ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Sensor data
+        in: body
+        name: sensor
+        required: true
+        schema:
+          $ref: '#/definitions/sensor.UpdateSensorRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Update sensor
+      tags:
+      - Master Data - Sensor
+  /master/vessel:
+    get:
+      description: Get all vessels
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Get all vessels
+      tags:
+      - Master Data - Vessel
+    post:
+      consumes:
+      - application/json
+      description: Create a new vessel
+      parameters:
+      - description: Vessel data
+        in: body
+        name: vessel
+        required: true
+        schema:
+          $ref: '#/definitions/vessel.CreateVesselRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Create vessel
+      tags:
+      - Master Data - Vessel
+  /master/vessel/{id}:
+    delete:
+      description: Soft delete vessel by ID
+      parameters:
+      - description: Vessel ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Delete vessel
+      tags:
+      - Master Data - Vessel
+    get:
+      description: Get vessel details by ID
+      parameters:
+      - description: Vessel ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Get vessel by ID
+      tags:
+      - Master Data - Vessel
+    patch:
+      consumes:
+      - application/json
+      description: Update vessel by ID
+      parameters:
+      - description: Vessel ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Vessel data
+        in: body
+        name: vessel
+        required: true
+        schema:
+          $ref: '#/definitions/vessel.UpdateVesselRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Update vessel
+      tags:
+      - Master Data - Vessel
+  /sensor-logs:
+    get:
+      description: Mendapatkan semua sensor logs dari MQTT (memerlukan authentication)
+      parameters:
+      - description: 'Limit jumlah data (default: 100)'
+        in: query
+        name: limit
+        type: integer
+      - description: 'Filter by status: success, error, not_found'
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'success: true, data: sensor logs array, count'
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 'error: Unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to fetch sensor logs'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Get all sensor logs
+      tags:
+      - Sensor Logs
+  /sensor-logs/latest:
+    get:
+      description: Mendapatkan sensor log terbaru dari MQTT (memerlukan authentication)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'success: true, data: sensor log'
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 'error: Unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: No sensor logs found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Get latest sensor log
+      tags:
+      - Sensor Logs
+  /tracking/health:
+    get:
+      description: Mendapatkan semua sensor health status (memerlukan authentication)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'success: true, data: health status array'
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 'error: Unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to fetch health status'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Get all sensor health status
+      tags:
+      - 7. Tracking
+  /tracking/health/inactive:
+    get:
+      description: Mendapatkan sensor health status yang inactive atau suspected broken
+        (memerlukan authentication)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'success: true, data: health status array'
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 'error: Unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to fetch health status'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Get inactive sensor health status
+      tags:
+      - 7. Tracking
+  /tracking/health/vessel/{vessel_id}:
+    get:
+      description: Mendapatkan sensor health status untuk vessel tertentu (memerlukan
+        authentication)
+      parameters:
+      - description: Vessel ID
+        in: path
+        name: vessel_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'success: true, data: health status array'
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 'error: Unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to fetch health status'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Get sensor health status by vessel
+      tags:
+      - 7. Tracking
+  /tracking/per-minute:
+    get:
+      description: Mendapatkan per-minute tracking data dengan filter date (memerlukan
+        authentication)
+      parameters:
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: end_date
+        type: string
+      - description: 'Limit jumlah data (default: 100)'
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by vessel ID
+        in: query
+        name: vessel_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'success: true, data: tracking array'
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 'error: Unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to fetch tracking'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Get per-minute tracking
+      tags:
+      - 7. Tracking
+  /tracking/per-minute/vessel/{vessel_id}:
+    get:
+      description: Mendapatkan per-minute tracking untuk vessel tertentu dengan filter
+        date (memerlukan authentication)
+      parameters:
+      - description: Vessel ID
+        in: path
+        name: vessel_id
+        required: true
+        type: integer
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: end_date
+        type: string
+      - description: 'Limit jumlah data (default: 100)'
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'success: true, data: tracking array'
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 'error: Unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to fetch tracking'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Get per-minute tracking by vessel
+      tags:
+      - 7. Tracking
+  /tracking/realtime:
+    get:
+      description: Mendapatkan realtime tracking data dengan filter date (memerlukan
+        authentication)
+      parameters:
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: end_date
+        type: string
+      - description: 'Limit jumlah data (default: 100)'
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by vessel ID
+        in: query
+        name: vessel_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'success: true, data: tracking array'
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 'error: Unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to fetch tracking'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Get realtime tracking
+      tags:
+      - 7. Tracking
+  /tracking/realtime/vessel/{vessel_id}:
+    get:
+      description: Mendapatkan realtime tracking untuk vessel tertentu dengan filter
+        date (memerlukan authentication)
+      parameters:
+      - description: Vessel ID
+        in: path
+        name: vessel_id
+        required: true
+        type: integer
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: end_date
+        type: string
+      - description: 'Limit jumlah data (default: 100)'
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'success: true, data: tracking array'
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 'error: Unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to fetch tracking'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Get realtime tracking by vessel
+      tags:
+      - 7. Tracking
+  /user:
+    get:
+      description: Mendapatkan list semua users
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'success: true, data: users array'
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 'error: Failed to fetch users'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Get all users
+      tags:
+      - User Management
+    post:
+      consumes:
+      - application/json
+      description: Admin dapat membuat user baru
+      parameters:
+      - description: User data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 'success: true, data: user'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: Admin access required'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Create new user
+      tags:
+      - User Management
+  /user/{id}:
+    delete:
+      description: Admin dapat delete user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'success: true'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid ID'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: Admin access required'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: User not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Delete user
+      tags:
+      - User Management
+    get:
+      description: Mendapatkan detail user berdasarkan ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'success: true, data: user'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid ID'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: User not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Get user by ID
+      tags:
+      - User Management
+    patch:
+      consumes:
+      - application/json
+      description: Admin dapat update user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: User data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'success: true, data: user'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: Admin access required'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: User not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Update user
+      tags:
+      - User Management
+  /user/current:
+    get:
+      description: Mendapatkan informasi user yang sedang login dari token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'success: true, data: user'
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 'error: Unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Get current user
+      tags:
+      - User Management
+securityDefinitions:
+  Bearer:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
+tags:
+- description: Endpoint untuk login dan logout user
+  name: Authentication
+- description: Endpoint untuk manajemen user (CRUD)
+  name: User Management
+- description: Endpoint untuk manajemen master data sensor
+  name: Master Data - Sensor
+- description: Endpoint untuk manajemen master data device
+  name: Master Data - Device
+- description: Endpoint untuk manajemen master data vessel/kapal
+  name: Master Data - Vessel
+- description: Endpoint untuk melihat logs data sensor dari MQTT
+  name: Sensor Logs
+- description: Endpoint untuk tracking realtime, per-minute, dan sensor health status
+  name: 7. Tracking
