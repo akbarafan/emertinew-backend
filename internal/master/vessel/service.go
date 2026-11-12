@@ -237,16 +237,130 @@ func (s *service) UpdateVessel(id uint, req UpdateVesselRequest, userID uint, ip
 		vessel.IsActive = *req.IsActive
 	}
 	if req.CompanyID != nil {
-		vessel.CompanyID = req.CompanyID
+		if *req.CompanyID == 0 {
+			vessel.CompanyID = nil
+		} else {
+			vessel.CompanyID = req.CompanyID
+		}
 	}
 	if req.FleetID != nil {
-		vessel.FleetID = req.FleetID
+		if *req.FleetID == 0 {
+			vessel.FleetID = nil
+		} else {
+			vessel.FleetID = req.FleetID
+		}
 	}
 	if req.SquadID != nil {
-		vessel.SquadID = req.SquadID
+		if *req.SquadID == 0 {
+			vessel.SquadID = nil
+		} else {
+			vessel.SquadID = req.SquadID
+		}
 	}
 	if req.FuelTypeID != nil {
-		vessel.FuelTypeID = req.FuelTypeID
+		if *req.FuelTypeID == 0 {
+			vessel.FuelTypeID = nil
+		} else {
+			vessel.FuelTypeID = req.FuelTypeID
+		}
+	}
+	if req.VesselTypeID != nil {
+		if *req.VesselTypeID == 0 {
+			vessel.VesselTypeID = nil
+		} else {
+			vessel.VesselTypeID = req.VesselTypeID
+		}
+	}
+	if req.ClassID != nil {
+		if *req.ClassID == 0 {
+			vessel.ClassID = nil
+		} else {
+			vessel.ClassID = req.ClassID
+		}
+	}
+	if req.MaterialID != nil {
+		if *req.MaterialID == 0 {
+			vessel.MaterialID = nil
+		} else {
+			vessel.MaterialID = req.MaterialID
+		}
+	}
+	if req.OperationID != nil {
+		if *req.OperationID == 0 {
+			vessel.OperationID = nil
+		} else {
+			vessel.OperationID = req.OperationID
+		}
+	}
+	if req.CallSign != nil {
+		if *req.CallSign == "" {
+			vessel.CallSign = nil
+		} else {
+			vessel.CallSign = req.CallSign
+		}
+	}
+	if req.IMONumber != nil {
+		if *req.IMONumber == "" {
+			vessel.IMONumber = nil
+		} else {
+			vessel.IMONumber = req.IMONumber
+		}
+	}
+	if req.MMSINumber != nil {
+		if *req.MMSINumber == "" {
+			vessel.MMSINumber = nil
+		} else {
+			vessel.MMSINumber = req.MMSINumber
+		}
+	}
+	if req.Flag != nil {
+		if *req.Flag == "" {
+			vessel.Flag = nil
+		} else {
+			vessel.Flag = req.Flag
+		}
+	}
+	if req.PortOfRegistry != nil {
+		if *req.PortOfRegistry == "" {
+			vessel.PortOfRegistry = nil
+		} else {
+			vessel.PortOfRegistry = req.PortOfRegistry
+		}
+	}
+	if req.ProductionYear != nil {
+		if *req.ProductionYear == 0 {
+			vessel.ProductionYear = nil
+		} else {
+			vessel.ProductionYear = req.ProductionYear
+		}
+	}
+	if req.Builder != nil {
+		if *req.Builder == "" {
+			vessel.Builder = nil
+		} else {
+			vessel.Builder = req.Builder
+		}
+	}
+	if req.HullNumber != nil {
+		if *req.HullNumber == "" {
+			vessel.HullNumber = nil
+		} else {
+			vessel.HullNumber = req.HullNumber
+		}
+	}
+	if req.ClassNotation != nil {
+		if *req.ClassNotation == "" {
+			vessel.ClassNotation = nil
+		} else {
+			vessel.ClassNotation = req.ClassNotation
+		}
+	}
+	if req.Nickname != nil {
+		if *req.Nickname == "" {
+			vessel.Nickname = nil
+		} else {
+			vessel.Nickname = req.Nickname
+		}
 	}
 	if req.TrackingSource != nil {
 		vessel.TrackingSource = req.TrackingSource

@@ -149,6 +149,19 @@ func (m *MQTTService) SetTrackingService(trackingService TrackingService) {
 	log.Printf("[MQTT-%s] Tracking service integrated", m.brokerLabel)
 }
 
+// IsConnected reports whether the underlying MQTT client has an active broker session.
+func (m *MQTTService) IsConnected() bool {
+	return m != nil && m.client != nil && m.client.IsConnected()
+}
+
+// Label returns the human-readable identifier of this broker client.
+func (m *MQTTService) Label() string {
+	if m == nil {
+		return ""
+	}
+	return m.brokerLabel
+}
+
 func (m *MQTTService) Connect() error {
 	if token := m.client.Connect(); token.Wait() && token.Error() != nil {
 		return token.Error()

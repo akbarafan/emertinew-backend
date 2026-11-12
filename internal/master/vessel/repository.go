@@ -107,7 +107,7 @@ func (r *repository) Update(vessel *model.MVessel) error {
 	return r.db.Model(&model.MVessel{}).Where("id = ?", vessel.ID).Select(
 		"Code", "Name", "IsActive",
 		"CompanyID", "VesselTypeID", "ClassID", "MaterialID", "OperationID",
-		"FleetID", "SquadID",
+		"FleetID", "SquadID", "FuelTypeID",
 		"CallSign", "IMONumber", "MMSINumber", "Flag", "PortOfRegistry",
 		"ProductionYear", "Builder", "HullNumber", "ClassNotation", "Nickname",
 		"TrackingSource", "UpdatedBy",

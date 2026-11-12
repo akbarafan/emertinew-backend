@@ -55,7 +55,9 @@ coverage.out
 
 req.txt
 
-# assets/*
+# User uploaded assets (tickets, attachments, customer files)
+assets/uploads/*
+!assets/uploads/**/.gitkeep
 
 # Backup files
 *.backup

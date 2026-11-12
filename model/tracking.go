@@ -57,6 +57,15 @@ type Tracking struct {
 	AccelX *float64 `gorm:"column:accel_x;type:double precision"` // Accelerometer X
 	AccelY *float64 `gorm:"column:accel_y;type:double precision"` // Accelerometer Y
 	AccelZ *float64 `gorm:"column:accel_z;type:double precision"` // Accelerometer Z
+	// BMKG Maritime Weather Data
+	WaveHeight   *float64 `gorm:"column:wave_height;type:double precision" json:"wave_height"`
+	WaveCat      *string  `gorm:"column:wave_cat;type:varchar(50)" json:"wave_cat"`
+	CurrentSpeed *float64 `gorm:"column:current_speed;type:double precision" json:"current_speed"`
+	CurrentTo    *string  `gorm:"column:current_to;type:varchar(50)" json:"current_to"`
+	WindSpeed    *float64 `gorm:"column:wind_speed;type:double precision" json:"wind_speed"`
+	WindGust     *float64 `gorm:"column:wind_gust;type:double precision" json:"wind_gust"`
+	WindFrom     *string  `gorm:"column:wind_from;type:varchar(50)" json:"wind_from"`
+	Weather      *string  `gorm:"column:weather;type:varchar(100)" json:"weather"`
 }
 
 // SensorData adalah hypertable untuk data sensor mentah dari MQTT

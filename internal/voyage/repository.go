@@ -100,7 +100,7 @@ func (r *repository) Create(voyage *model.Voyage) error {
 }
 
 func (r *repository) Update(voyage *model.Voyage) error {
-	return r.db.Save(voyage).Error
+	return r.db.Omit("Vessel").Save(voyage).Error
 }
 
 func (r *repository) CompleteVoyage(id uint) error {

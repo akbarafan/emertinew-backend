@@ -168,6 +168,21 @@ func (s *service) UpdateVoyage(id uint, req UpdateVoyageRequest, companyID *uint
 		return nil, errors.New("access denied to this voyage")
 	}
 
+	if req.VesselID != nil && *req.VesselID > 0 {
+		newVessel, err := s.repo.GetVesselByID(*req.VesselID)
+		if err != nil {
+			return nil, errors.New("target vessel not found")
+		}
+		if companyID != nil && *companyID > 0 && newVessel.CompanyID != nil && *newVessel.CompanyID != *companyID {
+			return nil, errors.New("cannot assign voyage to vessel of another company")
+		}
+		v.VesselID = *req.VesselID
+		v.Vessel = *newVessel
+	}
+	if req.VoyageNumber != nil && *req.VoyageNumber != "" {
+		v.VoyageNumber = *req.VoyageNumber
+	}
+
 	if req.Status != nil {
 		v.Status = *req.Status
 	}

@@ -45,8 +45,20 @@ func SeedUsers(db *gorm.DB) {
 		var compID *uint
 		if u.CompanyCode != "" {
 			var comp model.MCompany
-			if err := db.Where("code = ?", u.CompanyCode).First(&comp).Error; err == nil {
+			altCode := ""
+			if u.CompanyCode == "hcml" {
+				altCode = "ame"
+			} else if u.CompanyCode == "meratus" {
+				altCode = "bos"
+			}
+			if err := db.Where("code = ? OR code = ?", u.CompanyCode, altCode).First(&comp).Error; err == nil {
 				compID = &comp.ID
+			} else if u.CompanyCode == "hcml" {
+				id := uint(1)
+				compID = &id
+			} else if u.CompanyCode == "meratus" {
+				id := uint(2)
+				compID = &id
 			}
 		}
 
@@ -55,8 +67,12 @@ func SeedUsers(db *gorm.DB) {
 			// Update existing user with new password and role
 			existing.Password = string(hashedPassword)
 			existing.Role = u.Role
-			existing.CompanyID = compID
-			db.Save(&existing)
+			if u.CompanyCode == "" {
+				existing.CompanyID = nil
+			} else if compID != nil {
+				existing.CompanyID = compID
+			}
+			db.Omit("Company").Save(&existing)
 			log.Printf("[SEED] Updated user %s (Role: %s)", u.Username, u.Role)
 		} else {
 			// Create user

@@ -12,6 +12,9 @@ type CreateTicketRequest struct {
 	Priority      string `json:"priority" binding:"required"` // critical, high, medium, low
 	Subject       string `json:"subject" binding:"required"`
 	Description   string `json:"description" binding:"required"`
+	VesselStatus  string `json:"vesselStatus"`
+	PortLocation  string `json:"portLocation"`
+	AttachmentURL string `json:"attachmentUrl"`
 }
 
 type AcknowledgeTicketRequest struct {
@@ -20,9 +23,10 @@ type AcknowledgeTicketRequest struct {
 }
 
 type ReplyTicketRequest struct {
-	Message    string `json:"message" binding:"required"`
-	SenderName string `json:"senderName"`
-	SenderRole string `json:"senderRole"` // admin or user
+	Message       string `json:"message" binding:"required"`
+	SenderName    string `json:"senderName"`
+	SenderRole    string `json:"senderRole"` // admin or user
+	AttachmentURL string `json:"attachmentUrl"`
 }
 
 type ResolveTicketRequest struct {
@@ -40,43 +44,48 @@ type TicketFilterQuery struct {
 }
 
 type TicketReplyResponse struct {
-	ID         uint      `json:"id"`
-	TicketID   uint      `json:"ticketId"`
-	UserID     *uint     `json:"userId,omitempty"`
-	SenderName string    `json:"senderName"`
-	SenderRole string    `json:"senderRole"`
-	Message    string    `json:"message"`
-	CreatedAt  time.Time `json:"createdAt"`
+	ID            uint      `json:"id"`
+	TicketID      uint      `json:"ticketId"`
+	UserID        *uint     `json:"userId,omitempty"`
+	SenderName    string    `json:"senderName"`
+	SenderRole    string    `json:"senderRole"`
+	Message       string    `json:"message"`
+	AttachmentURL string    `json:"attachmentUrl,omitempty"`
+	CreatedAt     time.Time `json:"createdAt"`
 }
 
 type TicketResponse struct {
-	ID               uint                  `json:"id"`
-	TicketNumber     string                `json:"ticketNumber"`
-	VesselID         *uint                 `json:"vesselId,omitempty"`
-	VesselName       string                `json:"vesselName,omitempty"`
-	CompanyID        *uint                 `json:"companyId,omitempty"`
-	CompanyName      string                `json:"companyName,omitempty"`
-	CompanyCode      string                `json:"companyCode,omitempty"`
-	ReporterUserID   *uint                 `json:"reporterUserId,omitempty"`
-	ReporterName     string                `json:"reporterName"`
-	ReporterPhone    string                `json:"reporterPhone,omitempty"`
-	ReporterEmail    string                `json:"reporterEmail,omitempty"`
-	Category         string                `json:"category"`
-	Priority         string                `json:"priority"`
-	Subject          string                `json:"subject"`
-	Description      string                `json:"description"`
-	Status           string                `json:"status"`
-	AcknowledgedBy   string                `json:"acknowledgedBy,omitempty"`
-	AcknowledgedAt   *time.Time            `json:"acknowledgedAt,omitempty"`
-	SlaTargetAt      time.Time             `json:"slaTargetAt"`
-	ResolvedAt       *time.Time            `json:"resolvedAt,omitempty"`
-	ClosedAt         *time.Time            `json:"closedAt,omitempty"`
-	ResolutionNotes  string                `json:"resolutionNotes,omitempty"`
-	TelegramNotified bool                  `json:"telegramNotified"`
-	RepliesCount     int                   `json:"repliesCount"`
-	Replies          []TicketReplyResponse `json:"replies,omitempty"`
-	CreatedAt        time.Time             `json:"createdAt"`
-	UpdatedAt        time.Time             `json:"updatedAt"`
+	ID                uint                  `json:"id"`
+	TicketNumber      string                `json:"ticketNumber"`
+	VesselID          *uint                 `json:"vesselId,omitempty"`
+	VesselName        string                `json:"vesselName,omitempty"`
+	CompanyID         *uint                 `json:"companyId,omitempty"`
+	CompanyName       string                `json:"companyName,omitempty"`
+	CompanyCode       string                `json:"companyCode,omitempty"`
+	ReporterUserID    *uint                 `json:"reporterUserId,omitempty"`
+	ReporterName      string                `json:"reporterName"`
+	ReporterPhone     string                `json:"reporterPhone,omitempty"`
+	ReporterEmail     string                `json:"reporterEmail,omitempty"`
+	Category          string                `json:"category"`
+	Priority          string                `json:"priority"`
+	Subject           string                `json:"subject"`
+	Description       string                `json:"description"`
+	Status            string                `json:"status"`
+	AcknowledgedBy    string                `json:"acknowledgedBy,omitempty"`
+	AcknowledgedAt    *time.Time            `json:"acknowledgedAt,omitempty"`
+	SlaTargetAt       time.Time             `json:"slaTargetAt"`
+	ResolvedAt        *time.Time            `json:"resolvedAt,omitempty"`
+	ClosedAt          *time.Time            `json:"closedAt,omitempty"`
+	ResolutionNotes   string                `json:"resolutionNotes,omitempty"`
+	TelegramNotified  bool                  `json:"telegramNotified"`
+	TelegramMessageID *int                  `json:"telegramMessageId,omitempty"`
+	VesselStatus      string                `json:"vesselStatus,omitempty"`
+	PortLocation      string                `json:"portLocation,omitempty"`
+	AttachmentURL     string                `json:"attachmentUrl,omitempty"`
+	RepliesCount      int                   `json:"repliesCount"`
+	Replies           []TicketReplyResponse `json:"replies,omitempty"`
+	CreatedAt         time.Time             `json:"createdAt"`
+	UpdatedAt         time.Time             `json:"updatedAt"`
 }
 
 type TicketMetricsResponse struct {

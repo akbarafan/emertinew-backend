@@ -13,6 +13,7 @@ import (
 	"github.com/Alugara-Inovasi-Utama/emerti/config"
 	_ "github.com/Alugara-Inovasi-Utama/emerti/docs" // Import swagger docs
 	"github.com/Alugara-Inovasi-Utama/emerti/internal/master/sensor"
+	"github.com/Alugara-Inovasi-Utama/emerti/internal/telegram"
 	"github.com/Alugara-Inovasi-Utama/emerti/internal/tracking"
 	"github.com/Alugara-Inovasi-Utama/emerti/routes"
 	"github.com/Alugara-Inovasi-Utama/emerti/seed"
@@ -128,29 +129,71 @@ func main() {
 	}))
 
 	// Setup all routes (master routes)
-	allRoutes := routes.SetupRoutes(r, config.DB)
+	// Initialize Telegram Bot Service for CS & SLA Helpdesk
+	dashboardBase := cfg.WebPortalURL
+	if dashboardBase == "" {
+		dashboardBase = cfg.AppBaseURL
+	}
+	telegramService := telegram.NewService(
+		cfg.TelegramBotToken,
+		cfg.TelegramSupportChatID,
+		cfg.TelegramWebhookURL,
+		dashboardBase,
+	)
+
+	allRoutes := routes.SetupRoutes(r, config.DB, telegramService)
+
+	// Start Telegram polling if configured and enabled
+	if telegramService.IsEnabled() {
+		log.Printf("[TELEGRAM] ✅ Bot enabled and active: ChatID=%s", cfg.TelegramSupportChatID)
+		telegramService.StartPolling()
+		defer telegramService.StopPolling()
+	} else {
+		log.Printf("[TELEGRAM] ⚠️ Telegram Bot in standby: TokenLen=%d ChatID='%s'. Set TELEGRAM_BOT_TOKEN and TELEGRAM_SUPPORT_CHAT_ID in .env to activate.", len(cfg.TelegramBotToken), cfg.TelegramSupportChatID)
+	}
 
 	// Start tracking scheduler (processes newest data first for fast catch-up)
 	trackingScheduler := tracking.NewTrackingScheduler(config.DB, "ALL")
 	trackingScheduler.Start()
 	defer trackingScheduler.Stop()
 
-	// ── MQTT Broker 1 (Legacy) ──────────────────────────────────────────────
-	mqttOld := sensor.NewMQTTService(cfg.MQTTBroker, cfg.MQTTPort, allRoutes.SensorService, "OLD")
-	mqttOld.SetTrackingService(allRoutes.TrackingService)
-	allRoutes.SensorService.AddMQTTNotifier(mqttOld)
-	connectMQTT(mqttOld, "OLD")
-	defer mqttOld.Disconnect()
-
-	// ── MQTT Broker 2 (New, optional) ───────────────────────────────────────
-	log.Printf("[CONFIG] MQTT2_BROKER='%s' MQTT2_PORT='%s'", cfg.MQTT2Broker, cfg.MQTT2Port)
-	if cfg.MQTT2Broker != "" {
-		mqttNew := sensor.NewMQTTService(cfg.MQTT2Broker, cfg.MQTT2Port, allRoutes.SensorService, "NEW")
-		mqttNew.SetTrackingService(allRoutes.TrackingService)
-		allRoutes.SensorService.AddMQTTNotifier(mqttNew)
-		connectMQTT(mqttNew, "NEW")
-		defer mqttNew.Disconnect()
+	// ── MQTT Brokers (single or dual, empty slot cleanly skipped) ────────────
+	activeBrokers := cfg.ActiveMQTTBrokers()
+	type activeMQTTClient struct {
+		endpoint config.MQTTBrokerEndpoint
+		service  *sensor.MQTTService
 	}
+	var mqttClients []activeMQTTClient
+
+	if len(activeBrokers) == 0 {
+		log.Println("[MQTT] Standby: MQTT_BROKER and MQTT2_BROKER are empty — MQTT ingestion disabled")
+	} else {
+		for _, ep := range activeBrokers {
+			log.Printf("[CONFIG] Starting MQTT-%s client for %s:%s", ep.Label, ep.Host, ep.Port)
+			svc := sensor.NewMQTTService(ep.Host, ep.Port, allRoutes.SensorService, ep.Label)
+			svc.SetTrackingService(allRoutes.TrackingService)
+			allRoutes.SensorService.AddMQTTNotifier(svc)
+			connectMQTT(svc, ep.Label)
+			mqttClients = append(mqttClients, activeMQTTClient{endpoint: ep, service: svc})
+		}
+		defer func() {
+			for _, c := range mqttClients {
+				c.service.Disconnect()
+			}
+		}()
+	}
+
+	allRoutes.SetMQTTStatusProvider(func() []routes.MQTTBrokerHealth {
+		out := make([]routes.MQTTBrokerHealth, 0, len(mqttClients))
+		for _, c := range mqttClients {
+			out = append(out, routes.MQTTBrokerHealth{
+				Label:     c.endpoint.Label,
+				Broker:    c.endpoint.Host + ":" + c.endpoint.Port,
+				Connected: c.service.IsConnected(),
+			})
+		}
+		return out
+	})
 
 	log.Printf("[SERVER] Starting on :%s", cfg.AppPort)
 	r.Run(":" + cfg.AppPort)

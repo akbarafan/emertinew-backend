@@ -12,6 +12,7 @@ import (
 type Repository interface {
 	Create(ticket *model.SupportTicket) error
 	GetByID(id uint) (*model.SupportTicket, error)
+	GetByTelegramMessageID(msgID int) (*model.SupportTicket, error)
 	GetAll(filter TicketFilterQuery) ([]model.SupportTicket, error)
 	Update(ticket *model.SupportTicket) error
 	AddReply(reply *model.TicketReply) error
@@ -19,6 +20,8 @@ type Repository interface {
 	GetMetrics(companyID *uint, reporterUserID *uint) (*TicketMetricsResponse, error)
 	GetNextTicketNumber() (string, error)
 	GetVesselByID(id uint) (*model.MVessel, error)
+	Delete(id uint) error
+	BulkDelete(ids []uint) error
 }
 
 type repository struct {
@@ -42,6 +45,25 @@ func (r *repository) GetByID(id uint) (*model.SupportTicket, error) {
 		return nil, err
 	}
 	return &ticket, nil
+}
+
+func (r *repository) GetByTelegramMessageID(msgID int) (*model.SupportTicket, error) {
+	var ticket model.SupportTicket
+	// 1. Try finding directly by ticket's telegram_message_id
+	err := r.db.Preload("Company").Preload("Vessel").Preload("Vessel.Company").Preload("Replies", func(db *gorm.DB) *gorm.DB {
+		return db.Order("created_at ASC")
+	}).Where("telegram_message_id = ?", msgID).First(&ticket).Error
+	if err == nil && ticket.ID > 0 {
+		return &ticket, nil
+	}
+
+	// 2. Fallback: check if msgID was stored on any reply in t_ticket_replies
+	var reply model.TicketReply
+	if err := r.db.Where("telegram_message_id = ?", msgID).First(&reply).Error; err == nil && reply.TicketID > 0 {
+		return r.GetByID(reply.TicketID)
+	}
+
+	return nil, gorm.ErrRecordNotFound
 }
 
 func (r *repository) GetAll(filter TicketFilterQuery) ([]model.SupportTicket, error) {
@@ -142,4 +164,25 @@ func (r *repository) GetVesselByID(id uint) (*model.MVessel, error) {
 		return nil, err
 	}
 	return &vessel, nil
+}
+
+func (r *repository) Delete(id uint) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Unscoped().Where("ticket_id = ?", id).Delete(&model.TicketReply{}).Error; err != nil {
+			return err
+		}
+		return tx.Unscoped().Delete(&model.SupportTicket{}, id).Error
+	})
+}
+
+func (r *repository) BulkDelete(ids []uint) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Unscoped().Where("ticket_id IN ?", ids).Delete(&model.TicketReply{}).Error; err != nil {
+			return err
+		}
+		return tx.Unscoped().Where("id IN ?", ids).Delete(&model.SupportTicket{}).Error
+	})
 }

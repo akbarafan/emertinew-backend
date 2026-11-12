@@ -73,14 +73,28 @@ func (s *service) CreateMCU(req CreateMCURequest, userID uint, ipAddress, userAg
 		}
 	}
 
+	var vesselID *uint
+	if req.VesselID != nil && *req.VesselID > 0 {
+		_, err := s.repo.GetVesselByID(*req.VesselID)
+		if err != nil {
+			return nil, errors.New("Vessel not found")
+		}
+		vesselID = req.VesselID
+	}
+
 	mcu := &model.MMCU{
 		Name:     req.Name,
 		Location: req.Location,
+		VesselID: vesselID,
 	}
 
 	err := s.repo.Create(mcu)
 	if err != nil {
 		return nil, err
+	}
+
+	if vesselID != nil {
+		tracking.InvalidateRealtimeCache(*vesselID)
 	}
 
 	// Assign sensors ke mcu ini
@@ -156,14 +170,26 @@ func (s *service) UpdateMCU(id uint, req UpdateMCURequest, userID uint, ipAddres
 	}
 
 	if req.VesselID != nil {
-		// Invalidate realtime cache for old vessel if vessel assignment is changing
-		if mcu.VesselID != nil && *mcu.VesselID != *req.VesselID {
-			tracking.InvalidateRealtimeCache(*mcu.VesselID)
-			log.Printf("[MCU] Vessel assignment changing: MCU %d from vessel %d to vessel %d", id, *mcu.VesselID, *req.VesselID)
+		if *req.VesselID == 0 {
+			if mcu.VesselID != nil {
+				tracking.InvalidateRealtimeCache(*mcu.VesselID)
+				log.Printf("[MCU] Vessel assignment removed: MCU %d from vessel %d", id, *mcu.VesselID)
+			}
+			mcu.VesselID = nil
+		} else {
+			_, err := s.repo.GetVesselByID(*req.VesselID)
+			if err != nil {
+				return nil, errors.New("Vessel not found")
+			}
+			// Invalidate realtime cache for old vessel if vessel assignment is changing
+			if mcu.VesselID != nil && *mcu.VesselID != *req.VesselID {
+				tracking.InvalidateRealtimeCache(*mcu.VesselID)
+				log.Printf("[MCU] Vessel assignment changing: MCU %d from vessel %d to vessel %d", id, *mcu.VesselID, *req.VesselID)
+			}
+			// Also invalidate cache for new vessel to ensure fresh state
+			tracking.InvalidateRealtimeCache(*req.VesselID)
+			mcu.VesselID = req.VesselID
 		}
-		// Also invalidate cache for new vessel to ensure fresh state
-		tracking.InvalidateRealtimeCache(*req.VesselID)
-		mcu.VesselID = req.VesselID
 	}
 	if req.Name != "" {
 		mcu.Name = req.Name

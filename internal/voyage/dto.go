@@ -24,6 +24,8 @@ type CreateVoyageRequest struct {
 }
 
 type UpdateVoyageRequest struct {
+	VesselID        *uint      `json:"vesselId"`
+	VoyageNumber    *string    `json:"voyageNumber"`
 	Status          *string    `json:"status"`
 	OriginType      *string    `json:"originType"`
 	OriginID        *uint      `json:"originId"`

@@ -340,6 +340,20 @@ func (s *TrackingScheduler) createTrackingForMinute(vesselID uint, minute time.T
 		}
 	}
 
+	// Enrich with BMKG Maritime Weather if coordinates are available
+	if tracking.Lat != nil && tracking.Lon != nil && tracking.WaveHeight == nil {
+		if snap := GetBMKGWeather(*tracking.Lat, *tracking.Lon); snap != nil {
+			tracking.WaveHeight = snap.WaveHeight
+			tracking.WaveCat = snap.WaveCat
+			tracking.CurrentSpeed = snap.CurrentSpeed
+			tracking.CurrentTo = snap.CurrentTo
+			tracking.WindSpeed = snap.WindSpeed
+			tracking.WindGust = snap.WindGust
+			tracking.WindFrom = snap.WindFrom
+			tracking.Weather = snap.Weather
+		}
+	}
+
 	var trackingID uint
 	if trackingExists {
 		// UPDATE existing tracking with late-arriving data
@@ -617,6 +631,40 @@ func mergeTrackingUpdates(existing, newData *model.Tracking) map[string]interfac
 	if newData.AccelZ != nil {
 		updates["accel_z"] = newData.AccelZ
 		existing.AccelZ = newData.AccelZ
+	}
+
+	// BMKG Maritime Weather
+	if newData.WaveHeight != nil {
+		updates["wave_height"] = newData.WaveHeight
+		existing.WaveHeight = newData.WaveHeight
+	}
+	if newData.WaveCat != nil {
+		updates["wave_cat"] = newData.WaveCat
+		existing.WaveCat = newData.WaveCat
+	}
+	if newData.CurrentSpeed != nil {
+		updates["current_speed"] = newData.CurrentSpeed
+		existing.CurrentSpeed = newData.CurrentSpeed
+	}
+	if newData.CurrentTo != nil {
+		updates["current_to"] = newData.CurrentTo
+		existing.CurrentTo = newData.CurrentTo
+	}
+	if newData.WindSpeed != nil {
+		updates["wind_speed"] = newData.WindSpeed
+		existing.WindSpeed = newData.WindSpeed
+	}
+	if newData.WindGust != nil {
+		updates["wind_gust"] = newData.WindGust
+		existing.WindGust = newData.WindGust
+	}
+	if newData.WindFrom != nil {
+		updates["wind_from"] = newData.WindFrom
+		existing.WindFrom = newData.WindFrom
+	}
+	if newData.Weather != nil {
+		updates["weather"] = newData.Weather
+		existing.Weather = newData.Weather
 	}
 
 	return updates

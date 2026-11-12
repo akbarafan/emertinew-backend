@@ -38,8 +38,15 @@ type SupportTicket struct {
 	// Resolution details
 	ResolutionNotes string    `gorm:"type:text" json:"resolutionNotes"`
 
-	// Telegram integration hook readiness
-	TelegramNotified bool     `gorm:"default:false" json:"telegramNotified"`
+	// Telegram integration tracking
+	TelegramNotified  bool    `gorm:"default:false" json:"telegramNotified"`
+	TelegramMessageID *int    `gorm:"index" json:"telegramMessageId,omitempty"`
+	TelegramChatID    *int64  `json:"telegramChatId,omitempty"`
+
+	// Operational context & attachments
+	VesselStatus   string     `gorm:"type:varchar(30);default:'unknown'" json:"vesselStatus"` // sailing, docked, anchorage, unknown
+	PortLocation   string     `gorm:"type:varchar(100)" json:"portLocation,omitempty"`
+	AttachmentURL  string     `gorm:"type:varchar(255)" json:"attachmentUrl,omitempty"`
 
 	// Conversation replies
 	Replies        []TicketReply `gorm:"foreignKey:TicketID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"replies,omitempty"`
@@ -53,13 +60,15 @@ func (SupportTicket) TableName() string {
 
 // TicketReply represents a reply in the ticket conversation
 type TicketReply struct {
-	ID         uint      `gorm:"primaryKey" json:"id"`
-	TicketID   uint      `gorm:"not null;index" json:"ticketId"`
-	UserID     *uint     `json:"userId"`
-	SenderName string    `gorm:"type:varchar(100);not null" json:"senderName"`
-	SenderRole string    `gorm:"type:varchar(30);not null;default:'user'" json:"senderRole"` // admin, user
-	Message    string    `gorm:"type:text;not null" json:"message"`
-	CreatedAt  time.Time `gorm:"type:timestamptz;default:now()" json:"createdAt"`
+	ID                uint      `gorm:"primaryKey" json:"id"`
+	TicketID          uint      `gorm:"not null;index" json:"ticketId"`
+	UserID            *uint     `json:"userId"`
+	SenderName        string    `gorm:"type:varchar(100);not null" json:"senderName"`
+	SenderRole        string    `gorm:"type:varchar(30);not null;default:'user'" json:"senderRole"` // admin, user
+	Message           string    `gorm:"type:text;not null" json:"message"`
+	AttachmentURL     string    `gorm:"type:varchar(255)" json:"attachmentUrl,omitempty"`
+	TelegramMessageID *int      `json:"telegramMessageId,omitempty"`
+	CreatedAt         time.Time `gorm:"type:timestamptz;default:now()" json:"createdAt"`
 }
 
 func (TicketReply) TableName() string {

@@ -23,6 +23,7 @@ import (
 	"github.com/Alugara-Inovasi-Utama/emerti/internal/master/squad"
 	"github.com/Alugara-Inovasi-Utama/emerti/internal/master/vessel"
 	"github.com/Alugara-Inovasi-Utama/emerti/internal/master/vesseltype"
+	"github.com/Alugara-Inovasi-Utama/emerti/internal/telegram"
 	"github.com/Alugara-Inovasi-Utama/emerti/internal/ticket"
 	"github.com/Alugara-Inovasi-Utama/emerti/internal/tracking"
 	"github.com/Alugara-Inovasi-Utama/emerti/internal/user"
@@ -34,19 +35,63 @@ import (
 	"gorm.io/gorm"
 )
 
+// MQTTBrokerHealth describes runtime status of a configured MQTT broker.
+type MQTTBrokerHealth struct {
+	Label     string `json:"label"`
+	Broker    string `json:"broker"`
+	Connected bool   `json:"connected"`
+}
+
 type Routes struct {
 	SensorService   sensor.Service
 	TrackingService tracking.Service
+	TelegramService telegram.Service
+	TicketService   ticket.Service
+	mqttStatusFn    func() []MQTTBrokerHealth
 }
 
-func SetupRoutes(r *gin.Engine, db *gorm.DB) *Routes {
+// SetMQTTStatusProvider registers a callback returning live status for each configured broker.
+func (rt *Routes) SetMQTTStatusProvider(fn func() []MQTTBrokerHealth) {
+	rt.mqttStatusFn = fn
+}
+
+func SetupRoutes(r *gin.Engine, db *gorm.DB, tg telegram.Service) *Routes {
+	// Serve static uploads
+	r.Static("/uploads", "./assets/uploads")
+
+	rt := &Routes{}
+
 	// Health check route
 	r.GET("/", func(c *gin.Context) {
+		var brokers []MQTTBrokerHealth
+		if rt.mqttStatusFn != nil {
+			brokers = rt.mqttStatusFn()
+		}
+
+		mqttStatus := "standby"
+		primaryBroker := ""
+		if len(brokers) > 0 {
+			primaryBroker = brokers[0].Broker
+			anyConnected := false
+			for _, b := range brokers {
+				if b.Connected {
+					anyConnected = true
+					break
+				}
+			}
+			if anyConnected {
+				mqttStatus = "connected"
+			} else {
+				mqttStatus = "reconnecting"
+			}
+		}
+
 		c.JSON(200, gin.H{
-			"message":     "Emerti Backend API",
-			"mqtt_status": "connected",
-			"mqtt_broker": "192.168.18.88:1883",
-			"note":        "Using dynamic sensor subscriptions from master data",
+			"message":      "Emerti Backend API",
+			"mqtt_status":  mqttStatus,
+			"mqtt_broker":  primaryBroker,
+			"mqtt_brokers": brokers,
+			"note":         "Using dynamic sensor subscriptions from master data",
 		})
 	})
 
@@ -102,10 +147,11 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB) *Routes {
 	fuel.RegisterRoutes(protected, db)
 	alert.RegisterRoutes(protected, db)
 	voyage.RegisterRoutes(protected, db)
-	ticket.RegisterRoutes(protected, db)
+	ticketService := ticket.RegisterRoutes(api, protected, db, tg)
 
-	return &Routes{
-		SensorService:   sensorService,
-		TrackingService: trackingService,
-	}
+	rt.SensorService = sensorService
+	rt.TrackingService = trackingService
+	rt.TelegramService = tg
+	rt.TicketService = ticketService
+	return rt
 }

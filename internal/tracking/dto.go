@@ -53,7 +53,16 @@ type VesselTrackingDTO struct {
 	AccelX    *float64  `json:"accel_x" example:"0.1"` // Accelerometer X
 	AccelY    *float64  `json:"accel_y" example:"0.2"` // Accelerometer Y
 	AccelZ    *float64  `json:"accel_z" example:"9.8"` // Accelerometer Z
-	Timestamp time.Time `json:"timestamp" example:"2024-01-01T10:00:00Z"`
+	// BMKG Maritime Weather Data
+	WaveHeight   *float64 `json:"wave_height,omitempty" example:"1.2"`
+	WaveCat      *string  `json:"wave_cat,omitempty" example:"Sedang"`
+	CurrentSpeed *float64 `json:"current_speed,omitempty" example:"1.5"`
+	CurrentTo    *string  `json:"current_to,omitempty" example:"Barat (270°)"`
+	WindSpeed    *float64 `json:"wind_speed,omitempty" example:"15.0"`
+	WindGust     *float64 `json:"wind_gust,omitempty" example:"22.0"`
+	WindFrom     *string  `json:"wind_from,omitempty" example:"Timur (090°)"`
+	Weather      *string  `json:"weather,omitempty" example:"Cerah Berawan"`
+	Timestamp    time.Time `json:"timestamp" example:"2024-01-01T10:00:00Z"`
 }
 
 // TrackingQueryParams untuk query params API tracking
@@ -124,7 +133,16 @@ type RealtimeTrackingState struct {
 	AccelX     *float64
 	AccelY     *float64
 	AccelZ     *float64
-	LastUpdate time.Time
+	// BMKG Maritime Weather Data
+	WaveHeight   *float64
+	WaveCat      *string
+	CurrentSpeed *float64
+	CurrentTo    *string
+	WindSpeed    *float64
+	WindGust     *float64
+	WindFrom     *string
+	Weather      *string
+	LastUpdate   time.Time
 	// Previous position for speed/heading calculation
 	PrevLat  *float64
 	PrevLon  *float64

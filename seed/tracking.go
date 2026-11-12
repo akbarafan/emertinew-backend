@@ -157,18 +157,56 @@ func generateTrackingData(db *gorm.DB, cfg TrackingSeedConfig) {
 		flow1 := ((55.0 + speed*1.2) / 60) * (0.9 + rand.Float64()*0.2)
 		flow2 := ((52.0 + speed*1.2) / 60) * (0.9 + rand.Float64()*0.2)
 
+		// Generate realistic BMKG weather data
+		waveHeight := math.Round((0.4+rand.Float64()*1.3)*100) / 100
+		waveCat := "Rendah"
+		if waveHeight < 0.5 {
+			waveCat = "Tenang"
+		} else if waveHeight >= 1.25 {
+			waveCat = "Sedang"
+		}
+		currentSpeed := math.Round((0.4+rand.Float64()*1.8)*10) / 10
+		currentDirs := []string{"Barat", "Barat Laut", "Timur", "Tenggara", "Utara", "Selatan"}
+		currentTo := currentDirs[rand.Intn(len(currentDirs))]
+		windSpeed := math.Round((7.0+rand.Float64()*14.0)*10) / 10
+		windGust := math.Round((windSpeed+3.0+rand.Float64()*5.0)*10) / 10
+		windDirs := []string{"Timur", "Tenggara", "Selatan", "Barat Daya"}
+		windFrom := windDirs[rand.Intn(len(windDirs))]
+		weatherCond := "Cerah Berawan"
+		if rand.Float64() < 0.2 {
+			weatherCond = "Hujan Ringan"
+		}
+
+		// Generate environmental sensor data (Bridge Deck & Engine Room)
+		topTemp := math.Round((24.0+rand.Float64()*3.5)*10) / 10
+		topHumidity := math.Round((55.0+rand.Float64()*12.0)*10) / 10
+		botTemp := math.Round((38.5+rand.Float64()*5.5)*10) / 10
+		botHumidity := math.Round((60.0+rand.Float64()*14.0)*10) / 10
+
 		// Create tracking record
 		tracking := model.Tracking{
-			Time:     currentTime,
-			VesselID: cfg.VesselID,
-			Lat:      &currentLat,
-			Lon:      &currentLon,
-			Speed:    &speed,
-			Heading:  &currentHeading,
-			RPM1:     &rpm1,
-			RPM2:     &rpm2,
-			Flow1:    &flow1,
-			Flow2:    &flow2,
+			Time:         currentTime,
+			VesselID:     cfg.VesselID,
+			Lat:          &currentLat,
+			Lon:          &currentLon,
+			Speed:        &speed,
+			Heading:      &currentHeading,
+			RPM1:         &rpm1,
+			RPM2:         &rpm2,
+			Flow1:        &flow1,
+			Flow2:        &flow2,
+			TopTemp:      &topTemp,
+			TopHumidity:  &topHumidity,
+			BotTemp:      &botTemp,
+			BotHumidity:  &botHumidity,
+			WaveHeight:   &waveHeight,
+			WaveCat:      &waveCat,
+			CurrentSpeed: &currentSpeed,
+			CurrentTo:    &currentTo,
+			WindSpeed:    &windSpeed,
+			WindGust:     &windGust,
+			WindFrom:     &windFrom,
+			Weather:      &weatherCond,
 		}
 
 		trackingBatch = append(trackingBatch, tracking)

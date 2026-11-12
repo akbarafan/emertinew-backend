@@ -3,8 +3,13 @@
 -- Kapal: 321, 319, 320, 322, 323, 324
 -- Timestamp: NOW() - INTERVAL '2 minute' (agar langsung terbaca LIVE oleh backend)
 --
+-- PEMETAAN SENSOR DATABASE (m_sensors):
+--   Port Main Engine      : flow1 (IN/Supply),  flow2 (OUT/Return), rpm1 & rpm2 (Tachometer)
+--   Starboard Main Engine : flow3 (IN/Supply),  flow4 (OUT/Return), rpm3 & rpm4 (Tachometer)
+--   Rumus Flow Netto      : (flow_in - flow_out) * 60 = L/jam (L/h)
+--
 -- Cara Eksekusi di Terminal Docker:
--- docker exec -i emerti-db psql -U user -d emerti_db < backend/inject_all_vessels_live.sql
+--   docker exec -i emerti-cc-db psql -U emerti -d emerti_db < backend/inject_all_vessels_live.sql
 -- =============================================================================
 
 BEGIN;
@@ -23,12 +28,15 @@ INSERT INTO public.trackings (
 -- -----------------------------------------------------------------------------
 -- 1. [ID 321] MV Tectonic Forge (AHT. LIMIN) - Anchor Handling Tug
 -- Skenario: Full Speed Cruising transit Selat Madura menuju MAC Field
--- Kecepatan: 11.7 knots | RPM: 1425 / 1418 | Flow ME: ~69 L/h (1.15 L/min)
+-- Kecepatan: 11.7 knots | Heading: 122.0° | Mode: Full Speed
+-- Target Bench per ME: 70.0 L/h (140 L/h total)
+-- Port ME : RPM 1425 | Flow: (2.14 - 1.00)*60 = 68.4 L/h (Deviasi: -2.3% NORMAL)
+-- Stbd ME : RPM 1418 | Flow: (2.19 - 1.00)*60 = 71.4 L/h (Deviasi: +2.0% NORMAL)
 -- -----------------------------------------------------------------------------
 (
   NOW() - INTERVAL '2 minute', 321, -7.2620, 113.8420, 11.7, 122.0,
-  1425, 1418, 1500, NULL,
-  1.15, 1.14, 0.20, NULL,
+  1425, 1425, 1418, 1418,
+  2.14, 1.00, 2.19, 1.00,
   221.5, 12.8, 50.0, 2.83,
   24.3, 5.3, 24.5, 2.0,
   382.0, 29.4, 50.0, 11.20,
@@ -40,12 +48,15 @@ INSERT INTO public.trackings (
 -- -----------------------------------------------------------------------------
 -- 2. [ID 319] MV Abyssal Mechanica (CB Marine Hawk) - Crew Boat
 -- Skenario: Standby / Berlabuh Jangkar di Area Anchorage Tanjung Perak Surabaya
--- Kecepatan: 0.2 knots | RPM: 550 / 540 (Idle) | Flow ME: ~6.0 L/h (0.10 L/min)
+-- Kecepatan: 0.2 knots | Heading: 045.0° | Mode: Standby / Idle
+-- Target Bench per ME: 12.0 L/h
+-- Port ME : RPM 550 | Flow: (0.59 - 0.40)*60 = 11.4 L/h (Deviasi: -5.0% NORMAL)
+-- Stbd ME : RPM 540 | Flow: (0.61 - 0.40)*60 = 12.6 L/h (Deviasi: +5.0% NORMAL)
 -- -----------------------------------------------------------------------------
 (
   NOW() - INTERVAL '2 minute', 319, -7.1950, 112.7310, 0.2, 45.0,
-  550, 540, 1500, NULL,
-  0.10, 0.10, 0.20, NULL,
+  550, 550, 540, 540,
+  0.59, 0.40, 0.61, 0.40,
   220.2, 10.5, 50.0, 2.31,
   24.2, 4.8, 24.4, 1.8,
   380.0, 22.1, 50.0, 8.40,
@@ -56,13 +67,16 @@ INSERT INTO public.trackings (
 
 -- -----------------------------------------------------------------------------
 -- 3. [ID 320] MV Cybernetic Triton (NMS ACHIEVE) - Fast Utility / Crew Supply
--- Skenario: Economical Speed (Eco Sailing) membawa suplai logistik ke BD Field
--- Kecepatan: 8.8 knots | RPM: 1120 / 1125 | Flow ME: ~42.3 L/h (0.705 L/min)
+-- Skenario: Cruising transit Selat Madura menuju BD Field
+-- Kecepatan: 8.8 knots | Heading: 098.0° | Mode: Full Speed / Cruising
+-- Target Bench per ME: 70.0 L/h
+-- Port ME : RPM 1120 | Flow: (2.14 - 1.00)*60 = 68.4 L/h (Deviasi: -2.3% NORMAL)
+-- Stbd ME : RPM 1125 | Flow: (2.19 - 1.00)*60 = 71.4 L/h (Deviasi: +2.0% NORMAL)
 -- -----------------------------------------------------------------------------
 (
   NOW() - INTERVAL '2 minute', 320, -7.3450, 113.0500, 8.8, 98.0,
-  1120, 1125, 1500, NULL,
-  0.70, 0.71, 0.20, NULL,
+  1120, 1120, 1125, 1125,
+  2.14, 1.00, 2.19, 1.00,
   221.0, 11.6, 50.0, 2.56,
   24.4, 5.1, 24.6, 1.9,
   381.5, 26.2, 50.0, 9.98,
@@ -74,12 +88,15 @@ INSERT INTO public.trackings (
 -- -----------------------------------------------------------------------------
 -- 4. [ID 322] MV Subaquatic Vector (CB ALDWIN) - Crew Boat
 -- Skenario: Maneuvering (Olah Gerak merapat ke Platform BD WHP / FPSO)
--- Kecepatan: 3.5 knots | RPM: 780 / 760 | Flow ME: ~14.7 L/h (0.245 L/min)
+-- Kecepatan: 2.2 knots | Heading: 185.0° | Mode: Maneuvering
+-- Target Bench per ME: 15.0 L/h (30 L/h total)
+-- Port ME : RPM 750 | Flow: (0.64 - 0.40)*60 = 14.4 L/h (Deviasi: -4.0% NORMAL)
+-- Stbd ME : RPM 740 | Flow: (0.66 - 0.40)*60 = 15.6 L/h (Deviasi: +4.0% NORMAL)
 -- -----------------------------------------------------------------------------
 (
-  NOW() - INTERVAL '2 minute', 322, -7.3680, 113.2720, 3.5, 185.0,
-  780, 760, 1500, NULL,
-  0.25, 0.24, 0.20, NULL,
+  NOW() - INTERVAL '2 minute', 322, -7.3680, 113.2720, 2.2, 185.0,
+  750, 750, 740, 740,
+  0.64, 0.40, 0.66, 0.40,
   220.8, 11.2, 50.0, 2.47,
   24.1, 5.0, 24.3, 1.9,
   380.8, 24.5, 50.0, 9.33,
@@ -91,13 +108,15 @@ INSERT INTO public.trackings (
 -- -----------------------------------------------------------------------------
 -- 5. [ID 323] MV Hydro-Kinetic Prime (OPS ALHENA) - OSV / Platform Supply
 -- Skenario: Towing / Heavy Support di sekitar FPU Trunojoyo 01 (MBH Field)
--- Kecepatan: 5.2 knots | RPM: 1380 / 1375 | Flow ME: ~62.7 L/h (1.045 L/min)
--- (RPM & Beban Mesin tinggi untuk menarik/menahan beban, kecepatan rendah)
+-- Kecepatan: 5.2 knots (beban tarik) | Heading: 265.0° | Mode: Towing
+-- Target Bench per ME: 72.5 L/h (145 L/h total)
+-- Port ME : RPM 1380 | Flow: (2.18 - 1.00)*60 = 70.8 L/h (Deviasi: -2.3% NORMAL)
+-- Stbd ME : RPM 1375 | Flow: (2.24 - 1.00)*60 = 74.4 L/h (Deviasi: +2.6% NORMAL)
 -- -----------------------------------------------------------------------------
 (
   NOW() - INTERVAL '2 minute', 323, -7.3150, 114.3020, 5.2, 265.0,
-  1380, 1375, 1500, NULL,
-  1.05, 1.04, 0.25, NULL,
+  1380, 1380, 1375, 1375,
+  2.18, 1.00, 2.24, 1.00,
   221.8, 13.5, 50.0, 2.99,
   24.5, 5.6, 24.7, 2.1,
   383.0, 31.0, 50.0, 11.87,
@@ -109,12 +128,15 @@ INSERT INTO public.trackings (
 -- -----------------------------------------------------------------------------
 -- 6. [ID 324] MV Hydroterra Vanguard (AHT KYLIE S) - AHTS
 -- Skenario: Safety Standby Guard Vessel di MAC Field Safety Zone
--- Kecepatan: 0.1 knots | RPM: 0 / 0 (ME Stop, Genset AE On) | Flow ME: 0 L/h
+-- Kecepatan: 0.1 knots | Heading: 310.0° | Mode: ME Stop (Off / Standby)
+-- Target Bench per ME: 0 L/h (ME Stop / Moored)
+-- Port ME : RPM 0 | Flow: 0.00 L/h (Status: ME Tidak Aktif / NORMAL)
+-- Stbd ME : RPM 0 | Flow: 0.00 L/h (Status: ME Tidak Aktif / NORMAL)
 -- -----------------------------------------------------------------------------
 (
   NOW() - INTERVAL '2 minute', 324, -7.3820, 113.8400, 0.1, 310.0,
-  0, 0, 1500, NULL,
-  0.00, 0.00, 0.22, NULL,
+  0, 0, 0, 0,
+  0.00, 0.00, 0.00, 0.00,
   220.5, 9.8, 50.0, 2.16,
   24.2, 4.5, 24.4, 1.7,
   380.0, 20.5, 50.0, 7.79,

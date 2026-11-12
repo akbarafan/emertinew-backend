@@ -2,6 +2,7 @@ package mcu
 
 // CreateMCURequest untuk request payload create mcu
 type CreateMCURequest struct {
+	VesselID  *uint  `json:"vessel_id" example:"1"`
 	SensorIDs []uint `json:"sensor_id" example:"1,2"`
 	Name      string `json:"name" binding:"required" example:"GPS Module A1"`
 	Location  string `json:"location" binding:"required,oneof=bd er brd eng" example:"bd"`

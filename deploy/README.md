@@ -190,23 +190,13 @@ expected: GORM's `AutoMigrate` already creates `is_visible` and `flow_engine`
 from the `MSensor` struct before any SQL file runs, so those two files are
 redundant on an empty database. No action needed.
 
-### 4. `mqtt_status` in the health payload is hardcoded
+### 4. `mqtt_status` in the health payload
 
-`routes/routes.go` returns a literal `"mqtt_status": "connected"` and a stale
-`192.168.18.88:1883` broker address, regardless of actual broker state. Check
-`docker logs emerti-cc-api` for the real `[MQTT-OLD]` / `[MQTT-NEW]` lines
-instead.
+`GET /` (`routes/routes.go`) reports live `mqtt_status` (`connected` / `reconnecting` / `standby`), primary `mqtt_broker`, and per-broker `mqtt_brokers` entries from active configured clients.
 
 ## MQTT
 
-`MQTT_BROKER` / `MQTT2_BROKER` point at external brokers, not containers in this
-stack. If a broker is unreachable the API still starts and retries the
-connection in the background, so a bad value degrades rather than breaks the
-service. At the time of writing, `MQTT-NEW` (103.150.194.254) connects and
-subscribes 288 topics; `MQTT-OLD` (103.103.20.19) refuses the connection.
-
-To run without MQTT at all, set `MQTT_BROKER=` and `MQTT2_BROKER=` to empty
-strings in `deploy/.env`.
+`MQTT_BROKER` and `MQTT2_BROKER` point at external brokers, not containers in this stack. If either slot is empty (`MQTT_BROKER=` or `MQTT2_BROKER=`), it is cleanly skipped at startup without warnings or background retries. Keep `MQTT2_BROKER=` empty for single-broker operation, and fill it only if a secondary/urgent broker is needed. To run without MQTT at all, set both `MQTT_BROKER=` and `MQTT2_BROKER=` to empty strings in `deploy/.env`.
 
 ## Why the Go toolchain is pinned to 1.25
 

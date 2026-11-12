@@ -371,10 +371,18 @@ func (s *service) convertRealtimeStateToDTO(state *RealtimeTrackingState) *Vesse
 		BotHumidity: state.BotHumidity,
 		TopTemp:     state.TopTemp,
 		BotTemp:     state.BotTemp,
-		AccelX:      state.AccelX,
-		AccelY:      state.AccelY,
-		AccelZ:      state.AccelZ,
-		Timestamp:   state.LastUpdate,
+		AccelX:       state.AccelX,
+		AccelY:       state.AccelY,
+		AccelZ:       state.AccelZ,
+		WaveHeight:   state.WaveHeight,
+		WaveCat:      state.WaveCat,
+		CurrentSpeed: state.CurrentSpeed,
+		CurrentTo:    state.CurrentTo,
+		WindSpeed:    state.WindSpeed,
+		WindGust:     state.WindGust,
+		WindFrom:     state.WindFrom,
+		Weather:      state.Weather,
+		Timestamp:    state.LastUpdate,
 	}
 }
 
@@ -579,6 +587,16 @@ func (s *service) convertTrackingToDTO(tracking *model.Tracking, vesselID uint) 
 	dto.AccelX = tracking.AccelX
 	dto.AccelY = tracking.AccelY
 	dto.AccelZ = tracking.AccelZ
+
+	// Add BMKG Maritime Weather values
+	dto.WaveHeight = tracking.WaveHeight
+	dto.WaveCat = tracking.WaveCat
+	dto.CurrentSpeed = tracking.CurrentSpeed
+	dto.CurrentTo = tracking.CurrentTo
+	dto.WindSpeed = tracking.WindSpeed
+	dto.WindGust = tracking.WindGust
+	dto.WindFrom = tracking.WindFrom
+	dto.Weather = tracking.Weather
 
 	return dto
 }

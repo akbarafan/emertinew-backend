@@ -46,7 +46,7 @@ func (r *repository) GetByID(id uint) (*model.User, error) {
 }
 
 func (r *repository) Update(user *model.User) error {
-	return r.db.Save(user).Error
+	return r.db.Omit("Company").Save(user).Error
 }
 
 func (r *repository) Delete(id uint) error {
