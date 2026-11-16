@@ -31,4 +31,11 @@ func RegisterRoutes(router *gin.RouterGroup, db *gorm.DB) {
 
 	// Register vessel capacity routes
 	vesselcapacity.RegisterRoutes(router.Group("/vessel"), db)
+
+	// Register vessel running hours routes
+	rhSvc := NewRunningHoursService(db)
+	rhHandler := NewRunningHoursHandler(rhSvc)
+	router.GET("/vessel/:id/running-hours", rhHandler.GetRunningHoursHandler)
+	router.POST("/vessel/:id/running-hours/reset", rhHandler.ResetTripHoursHandler)
+	router.GET("/vessel/:id/running-hours/resets", rhHandler.GetResetLogsHandler)
 }

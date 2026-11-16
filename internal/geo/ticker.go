@@ -8,6 +8,7 @@ import (
 
 	"github.com/Alugara-Inovasi-Utama/emerti/model"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 // GeofenceTicker periodically checks vessel positions against company geofence zones
@@ -78,9 +79,10 @@ func (t *GeofenceTicker) process() {
 }
 
 func (t *GeofenceTicker) processVessel(vessel *model.MVessel, allGeofences []model.MGeofence) {
-	// Get latest tracking position
+	// Get latest tracking position (silenced: "record not found" is normal for vessels without telemetry yet)
 	var tracking model.Tracking
-	err := t.db.Where("vessel_id = ?", vessel.ID).
+	err := t.db.Session(&gorm.Session{Logger: logger.Discard}).
+		Where("vessel_id = ?", vessel.ID).
 		Order("time DESC").First(&tracking).Error
 	if err != nil || tracking.Lat == nil || tracking.Lon == nil {
 		return
@@ -129,9 +131,10 @@ func (t *GeofenceTicker) evaluateZone(vessel *model.MVessel, geofence *model.MGe
 		distMiles = (distToLine - radiusMeters) / 1609.34
 	}
 
-	// Check last log for this vessel and geofence
+	// Check last log for this vessel and geofence (silenced: "record not found" is normal for initial checks)
 	var lastLog model.GeofenceLog
-	hasLastLog := t.db.Where("vessel_id = ? AND geofence_id = ?", vessel.ID, geofence.ID).
+	hasLastLog := t.db.Session(&gorm.Session{Logger: logger.Discard}).
+		Where("vessel_id = ? AND geofence_id = ?", vessel.ID, geofence.ID).
 		Order("created_at DESC").First(&lastLog).Error == nil
 
 	// Check state transition or periodic alert

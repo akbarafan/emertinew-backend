@@ -89,6 +89,8 @@ func ConnectDatabase(cfg Config) {
 		&model.Voyage{},
 		&model.SupportTicket{},
 		&model.TicketReply{},
+		&model.VesselEngineRunningHours{},
+		&model.TripRunningHoursResetLog{},
 	)
 	if err != nil {
 		log.Fatal("Database migration failed:", err)

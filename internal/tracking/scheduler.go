@@ -370,6 +370,57 @@ func (s *TrackingScheduler) createTrackingForMinute(vesselID uint, minute time.T
 			return err
 		}
 		trackingID = tracking.ID
+
+		// Accumulate engine running hours (1 minute = 1/60 hr) for each active engine slot
+		const minuteHours = 1.0 / 60.0
+		if tracking.RPM1 != nil && *tracking.RPM1 > 0 {
+			_ = tx.Exec(`
+				INSERT INTO vessel_engine_running_hours (vessel_id, engine_slot, total_running_hours, trip_running_hours, last_active_at, updated_at)
+				VALUES (?, 'rpm1', ?, ?, ?, NOW())
+				ON CONFLICT (vessel_id, engine_slot)
+				DO UPDATE SET
+					total_running_hours = vessel_engine_running_hours.total_running_hours + EXCLUDED.total_running_hours,
+					trip_running_hours = vessel_engine_running_hours.trip_running_hours + EXCLUDED.trip_running_hours,
+					last_active_at = EXCLUDED.last_active_at,
+					updated_at = NOW()
+			`, vesselID, minuteHours, minuteHours, minute).Error
+		}
+		if tracking.RPM2 != nil && *tracking.RPM2 > 0 {
+			_ = tx.Exec(`
+				INSERT INTO vessel_engine_running_hours (vessel_id, engine_slot, total_running_hours, trip_running_hours, last_active_at, updated_at)
+				VALUES (?, 'rpm2', ?, ?, ?, NOW())
+				ON CONFLICT (vessel_id, engine_slot)
+				DO UPDATE SET
+					total_running_hours = vessel_engine_running_hours.total_running_hours + EXCLUDED.total_running_hours,
+					trip_running_hours = vessel_engine_running_hours.trip_running_hours + EXCLUDED.trip_running_hours,
+					last_active_at = EXCLUDED.last_active_at,
+					updated_at = NOW()
+			`, vesselID, minuteHours, minuteHours, minute).Error
+		}
+		if tracking.RPM3 != nil && *tracking.RPM3 > 0 {
+			_ = tx.Exec(`
+				INSERT INTO vessel_engine_running_hours (vessel_id, engine_slot, total_running_hours, trip_running_hours, last_active_at, updated_at)
+				VALUES (?, 'rpm3', ?, ?, ?, NOW())
+				ON CONFLICT (vessel_id, engine_slot)
+				DO UPDATE SET
+					total_running_hours = vessel_engine_running_hours.total_running_hours + EXCLUDED.total_running_hours,
+					trip_running_hours = vessel_engine_running_hours.trip_running_hours + EXCLUDED.trip_running_hours,
+					last_active_at = EXCLUDED.last_active_at,
+					updated_at = NOW()
+			`, vesselID, minuteHours, minuteHours, minute).Error
+		}
+		if tracking.RPM4 != nil && *tracking.RPM4 > 0 {
+			_ = tx.Exec(`
+				INSERT INTO vessel_engine_running_hours (vessel_id, engine_slot, total_running_hours, trip_running_hours, last_active_at, updated_at)
+				VALUES (?, 'rpm4', ?, ?, ?, NOW())
+				ON CONFLICT (vessel_id, engine_slot)
+				DO UPDATE SET
+					total_running_hours = vessel_engine_running_hours.total_running_hours + EXCLUDED.total_running_hours,
+					trip_running_hours = vessel_engine_running_hours.trip_running_hours + EXCLUDED.trip_running_hours,
+					last_active_at = EXCLUDED.last_active_at,
+					updated_at = NOW()
+			`, vesselID, minuteHours, minuteHours, minute).Error
+		}
 	}
 
 	// Link the latest sensor_data to this tracking
