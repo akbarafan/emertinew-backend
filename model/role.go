@@ -93,3 +93,71 @@ func CanMutateVoyage(role string) bool {
 func IsReadOnly(role string) bool {
 	return role == RoleViewer || role == RoleGuest
 }
+
+// RoleRank returns the numeric tier of a role (higher number = higher privilege).
+func RoleRank(role string) int {
+	switch role {
+	case RoleSuperadmin:
+		return 100
+	case RoleTechAdmin:
+		return 80
+	case RoleAdmin:
+		return 60
+	case RoleCompanyAdmin:
+		return 40
+	case RoleOperator:
+		return 20
+	case RoleViewer:
+		return 10
+	case RoleGuest:
+		return 5
+	default:
+		return 0
+	}
+}
+
+// CanAssignRole returns true if callerRole has authority to create or assign targetRole.
+// Rules:
+// 1. Only Superadmin can create or assign the Superadmin role.
+// 2. Caller cannot create or assign a role with higher rank than their own.
+// 3. Company Admin can only create/assign operator, viewer, or guest.
+func CanAssignRole(callerRole, targetRole string) bool {
+	if callerRole == RoleSuperadmin {
+		return true
+	}
+	if targetRole == RoleSuperadmin {
+		return false
+	}
+	if callerRole == RoleCompanyAdmin {
+		return targetRole == RoleOperator || targetRole == RoleViewer || targetRole == RoleGuest
+	}
+	return RoleRank(callerRole) >= RoleRank(targetRole)
+}
+
+// CanDeleteUser checks whether callerRole has permission to delete an account with targetRole.
+// Rules:
+// 1. Only Superadmin can delete a Superadmin account.
+// 2. Caller cannot delete a user with a higher role rank than their own.
+func CanDeleteUser(callerRole, targetRole string) bool {
+	if callerRole == RoleSuperadmin {
+		return true
+	}
+	if targetRole == RoleSuperadmin {
+		return false
+	}
+	return RoleRank(callerRole) >= RoleRank(targetRole)
+}
+
+// CanUpdateUser checks whether callerRole has permission to edit an account with targetRole.
+// Rules:
+// 1. Only Superadmin can edit a Superadmin account.
+// 2. Caller cannot edit an account with higher role rank than their own.
+func CanUpdateUser(callerRole, targetRole string) bool {
+	if callerRole == RoleSuperadmin {
+		return true
+	}
+	if targetRole == RoleSuperadmin {
+		return false
+	}
+	return RoleRank(callerRole) >= RoleRank(targetRole)
+}

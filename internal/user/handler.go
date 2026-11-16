@@ -36,6 +36,24 @@ func extractUserScope(c *gin.Context) (string, *uint) {
 	return role, compID
 }
 
+func extractCallerUserID(c *gin.Context) uint {
+	if uidVal, exists := c.Get("user_id"); exists {
+		switch v := uidVal.(type) {
+		case int:
+			if v > 0 {
+				return uint(v)
+			}
+		case uint:
+			return v
+		case float64:
+			if v > 0 {
+				return uint(v)
+			}
+		}
+	}
+	return 0
+}
+
 // Create handles user creation (admin or company_admin)
 // @Summary      Create new user
 // @Description  Admin atau Company Admin dapat membuat user baru
@@ -56,6 +74,12 @@ func (h *Handler) Create(c *gin.Context) {
 	}
 
 	callerRole, callerCompID := extractUserScope(c)
+
+	// Validate role creation authority: cannot create a role with higher rank, and non-superadmin cannot create superadmin
+	if !model.CanAssignRole(callerRole, req.Role) {
+		base.ErrorResponse(c, http.StatusForbidden, "Cannot create user with role '"+req.Role+"' (insufficient role privileges)", nil)
+		return
+	}
 
 	// If company_admin: restrict to own company and can only create operator or viewer
 	if callerRole == model.RoleCompanyAdmin {
@@ -170,10 +194,21 @@ func (h *Handler) Update(c *gin.Context) {
 
 	callerRole, callerCompID := extractUserScope(c)
 
-	// If company_admin: verify ownership
+	existing, err := h.service.GetByID(uint(id))
+	if err != nil {
+		base.ErrorResponse(c, http.StatusNotFound, "User not found", err)
+		return
+	}
+
+	// 1. Cannot modify user with higher role (e.g. admin cannot modify superadmin)
+	if !model.CanUpdateUser(callerRole, existing.Role) {
+		base.ErrorResponse(c, http.StatusForbidden, "Cannot modify user with role '"+existing.Role+"' (insufficient role privileges)", nil)
+		return
+	}
+
+	// 2. If company_admin: verify ownership
 	if model.IsCompanyScoped(callerRole) {
-		existing, err := h.service.GetByID(uint(id))
-		if err != nil || existing.CompanyID == nil || callerCompID == nil || *existing.CompanyID != *callerCompID {
+		if existing.CompanyID == nil || callerCompID == nil || *existing.CompanyID != *callerCompID {
 			base.ErrorResponse(c, http.StatusForbidden, "Access denied to update user from another company", nil)
 			return
 		}
@@ -185,7 +220,13 @@ func (h *Handler) Update(c *gin.Context) {
 		return
 	}
 
-	// Company admin cannot escalate role to platform staff or change company
+	// 3. Cannot escalate role to one higher than caller's authority, or to superadmin if not superadmin
+	if req.Role != "" && !model.CanAssignRole(callerRole, req.Role) {
+		base.ErrorResponse(c, http.StatusForbidden, "Cannot assign role '"+req.Role+"' (insufficient role privileges)", nil)
+		return
+	}
+
+	// 4. Company admin cannot escalate role or change company
 	if callerRole == model.RoleCompanyAdmin {
 		req.CompanyID = callerCompID
 		if req.Role != "" && req.Role != model.RoleOperator && req.Role != model.RoleViewer && req.Role != model.RoleGuest {
@@ -222,11 +263,29 @@ func (h *Handler) Delete(c *gin.Context) {
 		return
 	}
 
+	callerID := extractCallerUserID(c)
+	if callerID > 0 && callerID == uint(id) {
+		base.ErrorResponse(c, http.StatusBadRequest, "Cannot delete your own account", nil)
+		return
+	}
+
 	callerRole, callerCompID := extractUserScope(c)
 
+	existing, err := h.service.GetByID(uint(id))
+	if err != nil {
+		base.ErrorResponse(c, http.StatusNotFound, "User not found", err)
+		return
+	}
+
+	// 1. Cannot delete user with higher role (e.g. admin cannot delete superadmin)
+	if !model.CanDeleteUser(callerRole, existing.Role) {
+		base.ErrorResponse(c, http.StatusForbidden, "Cannot delete user with role '"+existing.Role+"' (insufficient role privileges)", nil)
+		return
+	}
+
+	// 2. If company_admin: verify ownership
 	if model.IsCompanyScoped(callerRole) {
-		existing, err := h.service.GetByID(uint(id))
-		if err != nil || existing.CompanyID == nil || callerCompID == nil || *existing.CompanyID != *callerCompID {
+		if existing.CompanyID == nil || callerCompID == nil || *existing.CompanyID != *callerCompID {
 			base.ErrorResponse(c, http.StatusForbidden, "Access denied to delete user from another company", nil)
 			return
 		}
