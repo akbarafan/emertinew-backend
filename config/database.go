@@ -106,6 +106,9 @@ func ConnectDatabase(cfg Config) {
 	// Create unique index for topic_key (IF NOT EXISTS = safe on every startup)
 	DB.Exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_m_sensors_topic_key ON m_sensors(topic_key)")
 
+	// Auto-heal PostgreSQL sequences that may fall out of sync after pg_dump restores
+	syncTableSequences(DB)
+
 	// Langkah 6: Setup TimescaleDB extension dan hypertables
 	setupTimescaleDB(DB)
 
@@ -227,5 +230,50 @@ func createTrackingIndexes(db *gorm.DB) {
 		log.Printf("Warning: Failed to create tracking coordinates index: %v", err)
 	} else {
 		log.Println("Index idx_tracking_vessel_coords created/verified successfully")
+	}
+}
+
+// syncTableSequences checks and advances PostgreSQL serial sequences to MAX(id).
+// This auto-heals "duplicate key value violates unique constraint *_pkey" errors
+// that occur after restoring database dumps where sequences were not advanced.
+func syncTableSequences(db *gorm.DB) {
+	tables := []string{
+		"m_vessels",
+		"m_fleets",
+		"m_squads",
+		"m_company",
+		"m_mcu",
+		"m_sensors",
+		"users",
+		"vessel_capacities",
+		"vessel_dimensions",
+		"m_alert_events",
+		"m_classification",
+		"m_crew",
+		"m_fuel_types",
+		"m_geofences",
+		"m_material_hull",
+		"m_offshore",
+		"m_operation_status",
+		"m_port",
+		"m_vessel_type",
+		"t_voyages",
+		"t_support_tickets",
+		"t_ticket_replies",
+	}
+
+	for _, tbl := range tables {
+		query := fmt.Sprintf(`
+			DO $$
+			DECLARE
+				seq text;
+			BEGIN
+				seq := pg_get_serial_sequence('%s', 'id');
+				IF seq IS NOT NULL THEN
+					EXECUTE format('SELECT setval(%%L, COALESCE((SELECT MAX(id) FROM %s), 1))', seq);
+				END IF;
+			END $$;
+		`, tbl, tbl)
+		_ = db.Exec(query).Error
 	}
 }
