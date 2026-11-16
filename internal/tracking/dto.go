@@ -151,4 +151,27 @@ type RealtimeTrackingState struct {
 	SpikeCandidateLat   *float64
 	SpikeCandidateLon   *float64
 	SpikeCandidateCount int
+	// Per-sensor last seen timestamps for deadband expiry
+	LastGPS         time.Time
+	LastRPM1        time.Time
+	LastRPM2        time.Time
+	LastRPM3        time.Time
+	LastRPM4        time.Time
+	LastFlow1       time.Time
+	LastFlow2       time.Time
+	LastFlow3       time.Time
+	LastFlow4       time.Time
+	LastTopAC       time.Time
+	LastTopDC       time.Time
+	LastTopBat      time.Time
+	LastBotAC       time.Time
+	LastBotDC       time.Time
+	LastBotBat      time.Time
+	LastTopDoor     time.Time
+	LastBotDoor     time.Time
+	LastTopTemp     time.Time
+	LastBotTemp     time.Time
+	LastTopHumidity time.Time
+	LastBotHumidity time.Time
+	LastAccel       time.Time
 }

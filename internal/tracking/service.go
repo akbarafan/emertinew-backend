@@ -232,6 +232,7 @@ func (s *service) updateRealtimeStateFromSensorData(state *RealtimeTrackingState
 
 		// Handle speed/heading calculation from previous position
 		if tempTracking.Lat != nil && tempTracking.Lon != nil {
+			state.LastGPS = now
 			newLat, newLon := *tempTracking.Lat, *tempTracking.Lon
 
 			if state.Lat != nil && state.Lon != nil && !state.LastUpdate.IsZero() {
@@ -288,38 +289,113 @@ func (s *service) updateRealtimeStateFromSensorData(state *RealtimeTrackingState
 
 	case "rpm":
 		extractor.RPM(tempTracking, value, processed, sensorNumber)
+		switch sensorNumber {
+		case 1:
+			if tempTracking.RPM1 != nil {
+				state.LastRPM1 = now
+			}
+		case 2:
+			if tempTracking.RPM2 != nil {
+				state.LastRPM2 = now
+			}
+		case 3:
+			if tempTracking.RPM3 != nil {
+				state.LastRPM3 = now
+			}
+		case 4:
+			if tempTracking.RPM4 != nil {
+				state.LastRPM4 = now
+			}
+		}
 		copyTrackingToState(state, tempTracking)
 
 	case "flow":
 		extractor.Flow(tempTracking, value, processed, sensorNumber, kFactor)
+		switch sensorNumber {
+		case 1:
+			if tempTracking.Flow1 != nil {
+				state.LastFlow1 = now
+			}
+		case 2:
+			if tempTracking.Flow2 != nil {
+				state.LastFlow2 = now
+			}
+		case 3:
+			if tempTracking.Flow3 != nil {
+				state.LastFlow3 = now
+			}
+		case 4:
+			if tempTracking.Flow4 != nil {
+				state.LastFlow4 = now
+			}
+		}
 		copyTrackingToState(state, tempTracking)
 
 	case "ac":
 		extractor.AC(tempTracking, value, processed, isTop, isBot)
+		if isTop && tempTracking.TopACVolt != nil {
+			state.LastTopAC = now
+		}
+		if isBot && tempTracking.BotACVolt != nil {
+			state.LastBotAC = now
+		}
 		copyTrackingToState(state, tempTracking)
 
 	case "dc":
 		extractor.DC(tempTracking, value, processed, isTop, isBot)
+		if isTop && tempTracking.TopDCVolt != nil {
+			state.LastTopDC = now
+		}
+		if isBot && tempTracking.BotDCVolt != nil {
+			state.LastBotDC = now
+		}
 		copyTrackingToState(state, tempTracking)
 
 	case "bat":
 		extractor.Battery(tempTracking, value, processed, isTop, isBot)
+		if isTop && tempTracking.TopBatVolt != nil {
+			state.LastTopBat = now
+		}
+		if isBot && tempTracking.BotBatVolt != nil {
+			state.LastBotBat = now
+		}
 		copyTrackingToState(state, tempTracking)
 
 	case "door":
 		extractor.Door(tempTracking, value, processed, isTop, isBot, sensorNumber)
+		if isTop && (tempTracking.TopDoor1 != nil || tempTracking.TopDoor2 != nil) {
+			state.LastTopDoor = now
+		}
+		if isBot && (tempTracking.BotDoor1 != nil || tempTracking.BotDoor2 != nil) {
+			state.LastBotDoor = now
+		}
 		copyTrackingToState(state, tempTracking)
 
 	case "temp":
 		extractor.Temperature(tempTracking, value, processed, isTop, isBot)
+		if isTop && tempTracking.TopTemp != nil {
+			state.LastTopTemp = now
+		}
+		if isBot && tempTracking.BotTemp != nil {
+			state.LastBotTemp = now
+		}
 		copyTrackingToState(state, tempTracking)
 
 	case "humidity":
 		extractor.Humidity(tempTracking, value, processed, isTop, isBot)
+		if isTop && tempTracking.TopHumidity != nil {
+			state.LastTopHumidity = now
+		}
+		if isBot && tempTracking.BotHumidity != nil {
+			state.LastBotHumidity = now
+		}
 		copyTrackingToState(state, tempTracking)
 
 	case "accel":
 		extractor.Accelerometer(tempTracking, value, processed)
+		if tempTracking.AccelX != nil || tempTracking.AccelY != nil || tempTracking.AccelZ != nil {
+			state.LastAccel = now
+		}
 		copyTrackingToState(state, tempTracking)
 
 	default:
@@ -328,52 +404,18 @@ func (s *service) updateRealtimeStateFromSensorData(state *RealtimeTrackingState
 }
 
 // convertRealtimeStateToDTO converts realtime state to DTO for WebSocket broadcast
+// Applies zero-tolerance/deadband expiry (60s) per sensor group so stale sensors
+// cleanly drop to nil without bloating WebSocket payload with extra timestamp fields.
 func (s *service) convertRealtimeStateToDTO(state *RealtimeTrackingState) *VesselTrackingDTO {
 	stateMutex.RLock()
 	defer stateMutex.RUnlock()
 
-	return &VesselTrackingDTO{
-		VesselID:    state.VesselID,
-		VesselName:  state.VesselName,
-		Lat:         state.Lat,
-		Lon:         state.Lon,
-		Speed:       state.Speed,
-		Heading:     state.Heading,
-		RPM1:        state.RPM1,
-		RPM2:        state.RPM2,
-		RPM3:        state.RPM3,
-		RPM4:        state.RPM4,
-		Flow1:       state.Flow1,
-		Flow2:       state.Flow2,
-		Flow3:       state.Flow3,
-		Flow4:       state.Flow4,
-		TopACVolt:   state.TopACVolt,
-		TopACAmp:    state.TopACAmp,
-		TopACFreq:   state.TopACFreq,
-		TopACPower:  state.TopACPower,
-		TopDCVolt:   state.TopDCVolt,
-		TopDCAmp:    state.TopDCAmp,
-		TopBatVolt:  state.TopBatVolt,
-		TopBatAmp:   state.TopBatAmp,
-		BotACVolt:   state.BotACVolt,
-		BotACAmp:    state.BotACAmp,
-		BotACFreq:   state.BotACFreq,
-		BotACPower:  state.BotACPower,
-		BotDCVolt:   state.BotDCVolt,
-		BotDCAmp:    state.BotDCAmp,
-		BotBatVolt:  state.BotBatVolt,
-		BotBatAmp:   state.BotBatAmp,
-		TopDoor1:    state.TopDoor1,
-		TopDoor2:    state.TopDoor2,
-		BotDoor1:    state.BotDoor1,
-		BotDoor2:    state.BotDoor2,
-		TopHumidity: state.TopHumidity,
-		BotHumidity: state.BotHumidity,
-		TopTemp:     state.TopTemp,
-		BotTemp:     state.BotTemp,
-		AccelX:       state.AccelX,
-		AccelY:       state.AccelY,
-		AccelZ:       state.AccelZ,
+	now := time.Now()
+	const sensorExpiry = 60 * time.Second
+
+	dto := &VesselTrackingDTO{
+		VesselID:     state.VesselID,
+		VesselName:   state.VesselName,
 		WaveHeight:   state.WaveHeight,
 		WaveCat:      state.WaveCat,
 		CurrentSpeed: state.CurrentSpeed,
@@ -384,6 +426,110 @@ func (s *service) convertRealtimeStateToDTO(state *RealtimeTrackingState) *Vesse
 		Weather:      state.Weather,
 		Timestamp:    state.LastUpdate,
 	}
+
+	// GPS: speed/heading expire after 60s, coordinates retained as last known position for map display
+	if !state.LastGPS.IsZero() && now.Sub(state.LastGPS) <= sensorExpiry {
+		dto.Lat = state.Lat
+		dto.Lon = state.Lon
+		dto.Speed = state.Speed
+		dto.Heading = state.Heading
+	} else if state.Lat != nil && state.Lon != nil {
+		dto.Lat = state.Lat
+		dto.Lon = state.Lon
+	}
+
+	// RPM
+	if !state.LastRPM1.IsZero() && now.Sub(state.LastRPM1) <= sensorExpiry {
+		dto.RPM1 = state.RPM1
+	}
+	if !state.LastRPM2.IsZero() && now.Sub(state.LastRPM2) <= sensorExpiry {
+		dto.RPM2 = state.RPM2
+	}
+	if !state.LastRPM3.IsZero() && now.Sub(state.LastRPM3) <= sensorExpiry {
+		dto.RPM3 = state.RPM3
+	}
+	if !state.LastRPM4.IsZero() && now.Sub(state.LastRPM4) <= sensorExpiry {
+		dto.RPM4 = state.RPM4
+	}
+
+	// Flow
+	if !state.LastFlow1.IsZero() && now.Sub(state.LastFlow1) <= sensorExpiry {
+		dto.Flow1 = state.Flow1
+	}
+	if !state.LastFlow2.IsZero() && now.Sub(state.LastFlow2) <= sensorExpiry {
+		dto.Flow2 = state.Flow2
+	}
+	if !state.LastFlow3.IsZero() && now.Sub(state.LastFlow3) <= sensorExpiry {
+		dto.Flow3 = state.Flow3
+	}
+	if !state.LastFlow4.IsZero() && now.Sub(state.LastFlow4) <= sensorExpiry {
+		dto.Flow4 = state.Flow4
+	}
+
+	// Top MCU Electrical
+	if !state.LastTopAC.IsZero() && now.Sub(state.LastTopAC) <= sensorExpiry {
+		dto.TopACVolt = state.TopACVolt
+		dto.TopACAmp = state.TopACAmp
+		dto.TopACFreq = state.TopACFreq
+		dto.TopACPower = state.TopACPower
+	}
+	if !state.LastTopDC.IsZero() && now.Sub(state.LastTopDC) <= sensorExpiry {
+		dto.TopDCVolt = state.TopDCVolt
+		dto.TopDCAmp = state.TopDCAmp
+	}
+	if !state.LastTopBat.IsZero() && now.Sub(state.LastTopBat) <= sensorExpiry {
+		dto.TopBatVolt = state.TopBatVolt
+		dto.TopBatAmp = state.TopBatAmp
+	}
+
+	// Bottom MCU Electrical
+	if !state.LastBotAC.IsZero() && now.Sub(state.LastBotAC) <= sensorExpiry {
+		dto.BotACVolt = state.BotACVolt
+		dto.BotACAmp = state.BotACAmp
+		dto.BotACFreq = state.BotACFreq
+		dto.BotACPower = state.BotACPower
+	}
+	if !state.LastBotDC.IsZero() && now.Sub(state.LastBotDC) <= sensorExpiry {
+		dto.BotDCVolt = state.BotDCVolt
+		dto.BotDCAmp = state.BotDCAmp
+	}
+	if !state.LastBotBat.IsZero() && now.Sub(state.LastBotBat) <= sensorExpiry {
+		dto.BotBatVolt = state.BotBatVolt
+		dto.BotBatAmp = state.BotBatAmp
+	}
+
+	// Door Status
+	if !state.LastTopDoor.IsZero() && now.Sub(state.LastTopDoor) <= sensorExpiry {
+		dto.TopDoor1 = state.TopDoor1
+		dto.TopDoor2 = state.TopDoor2
+	}
+	if !state.LastBotDoor.IsZero() && now.Sub(state.LastBotDoor) <= sensorExpiry {
+		dto.BotDoor1 = state.BotDoor1
+		dto.BotDoor2 = state.BotDoor2
+	}
+
+	// Environment (Temp & Humidity)
+	if !state.LastTopTemp.IsZero() && now.Sub(state.LastTopTemp) <= sensorExpiry {
+		dto.TopTemp = state.TopTemp
+	}
+	if !state.LastBotTemp.IsZero() && now.Sub(state.LastBotTemp) <= sensorExpiry {
+		dto.BotTemp = state.BotTemp
+	}
+	if !state.LastTopHumidity.IsZero() && now.Sub(state.LastTopHumidity) <= sensorExpiry {
+		dto.TopHumidity = state.TopHumidity
+	}
+	if !state.LastBotHumidity.IsZero() && now.Sub(state.LastBotHumidity) <= sensorExpiry {
+		dto.BotHumidity = state.BotHumidity
+	}
+
+	// Accelerometer
+	if !state.LastAccel.IsZero() && now.Sub(state.LastAccel) <= sensorExpiry {
+		dto.AccelX = state.AccelX
+		dto.AccelY = state.AccelY
+		dto.AccelZ = state.AccelZ
+	}
+
+	return dto
 }
 
 // parsePayloadTimestamp extracts the `timestamp` field from a sensor payload.
